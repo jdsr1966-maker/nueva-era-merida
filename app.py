@@ -2,9 +2,18 @@ import os
 import pandas as pd
 import streamlit as st
 
-# Configuración general de la página para dispositivos móviles y escritorio
+# Buscar el logo oficial para usarlo como icono de la aplicación (favicon en móvil y laptop)
+logo_file = "logo.jpg"
+for fname in ["logo.jpg", "logo.png", "logo.jpeg", "Logo.png", "Logo.jpg"]:
+  if os.path.exists(fname):
+    logo_file = fname
+    break
+
+# Configuración general de la página
 st.set_page_config(
-    page_title="Nueva Era Mérida Digital", page_icon="📰", layout="wide"
+    page_title="Nueva Era Mérida Digital",
+    page_icon=logo_file if os.path.exists(logo_file) else "📰",
+    layout="wide",
 )
 
 # Archivo local para persistir los artículos y notas
@@ -26,11 +35,21 @@ def load_data():
   if os.path.exists(DATA_FILE):
     try:
       df = pd.read_csv(DATA_FILE)
+      # Sanitización automática de URLs malformadas de raíz
+      if "Enlace Web" in df.columns:
+        df["Enlace Web"] = df["Enlace Web"].astype(str)
+        # Corregir si se duplicó https:// o contiene errores de tipeo
+        df.loc[
+            df["Enlace Web"].str.contains("https://.*https://"), "Enlace Web"
+        ] = "https://www.nuevaerameridadigital.com"
+        df["Enlace Web"] = df["Enlace Web"].replace(
+            "nan", "https://www.nuevaerameridadigital.com"
+        )
       return df
     except Exception:
       pass
 
-  # Notas iniciales de ejemplo
+  # Notas iniciales limpias y correctas
   data_inicial = {
       "Fecha": ["2026-10-02", "2026-09-25"],
       "Título": [
@@ -66,24 +85,19 @@ def save_data(df):
   df.to_csv(DATA_FILE, index=False)
 
 
-# Cargar base de datos
+# Cargar base de datos sanitizada
 df_articles = load_data()
 
 # --- BARRA LATERAL ---
 st.sidebar.markdown("### 📰 Nueva Era Mérida Digital")
 
-# Carga segura del logo
-logo_loaded = False
-for logo_name in ["logo.jpg", "logo.png", "logo.jpeg", "Logo.png", "Logo.jpg"]:
-  if os.path.exists(logo_name):
-    try:
-      st.sidebar.image(logo_name, use_container_width=True)
-      logo_loaded = True
-      break
-    except Exception:
-      pass
-
-if not logo_loaded:
+# Carga segura del logo en la barra lateral
+if os.path.exists(logo_file):
+  try:
+    st.sidebar.image(logo_file, use_container_width=True)
+  except Exception:
+    st.sidebar.info("Panel de Redacción y Archivo")
+else:
   st.sidebar.info("Panel de Redacción y Archivo")
 
 st.sidebar.markdown("---")
@@ -100,6 +114,13 @@ st.sidebar.markdown(
     "<small>Depósito Legal: ME2026000169</small>", unsafe_allow_html=True
 )
 
+# Herramienta de mantenimiento de raíz en la barra lateral
+with st.sidebar.expander("⚙️ Mantenimiento"):
+  if st.button("🔄 Reiniciar Archivo de Notas"):
+    if os.path.exists(DATA_FILE):
+      os.remove(DATA_FILE)
+    st.rerun()
+
 # --- CUERPO PRINCIPAL DE LA APLICACIÓN ---
 st.title("📰 Nueva Era Mérida Digital")
 st.markdown(
@@ -113,7 +134,6 @@ if menu == "📖 Ver Archivo de Notas":
   if df_articles.empty:
     st.info("No hay notas registradas todavía.")
   else:
-    # Filtro con todas las secciones oficiales
     secciones_disponibles = ["Todas"] + SECCIONES_OFICIALES
     seccion_filtro = st.selectbox("Filtrar por Sección", secciones_disponibles)
 
@@ -143,7 +163,6 @@ if menu == "📖 Ver Archivo de Notas":
           if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
             st.markdown(f"*{row['Resumen']}*")
 
-          # Enlace claro hacia la web
           if pd.notna(row["Enlace Web"]) and str(row["Enlace Web"]).strip() != "":
             st.markdown(f"🔗 **[Abrir enlace en la Web]({row['Enlace Web']})**")
 
@@ -171,13 +190,21 @@ elif menu == "✍️ Registrar Nueva Nota":
       if titulo.strip() == "":
         st.warning("Por favor, ingresa al menos el título de la nota.")
       else:
+        # Validación automática para prevenir el error de tipeo en la URL
+        enlace_limpio = enlace_web.strip()
+        if (
+            not enlace_limpio.startswith("http://")
+            and not enlace_limpio.startswith("https://")
+        ):
+          enlace_limpio = "https://" + enlace_limpio
+
         nueva_fila = pd.DataFrame(
             [{
                 "Fecha": str(fecha),
                 "Título": titulo,
                 "Sección": seccion,
                 "Autor": autor,
-                "Enlace Web": enlace_web,
+                "Enlace Web": enlace_limpio,
                 "Resumen": resumen,
             }]
         )
