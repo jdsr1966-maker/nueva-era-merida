@@ -15,10 +15,36 @@ def load_data():
   if os.path.exists(DATA_FILE):
     return pd.read_csv(DATA_FILE)
   else:
-    # Estructura inicial limpia si no hay datos previos
-    return pd.DataFrame(
-        columns=["Fecha", "Título", "Sección", "Autor", "Enlace Web", "Resumen"]
-    )
+    # Notas iniciales de ejemplo basadas en la actividad reciente del medio
+    data_inicial = {
+        "Fecha": ["2026-10-02", "2026-09-25"],
+        "Título": [
+            "Selección de delegados parroquiales y sectoriales del CLPP",
+            (
+                "Exposición 'Confluencias 2: Metamorfosis' en el Museo de Arte"
+                " Colonial"
+            ),
+        ],
+        "Sección": ["Noticias Locales", "Cultura"],
+        "Autor": ["Equipo Editorial", "Equipo Editorial"],
+        "Enlace Web": [
+            "https://www.nuevaerameridadigital.com",
+            "https://www.nuevaerameridadigital.com",
+        ],
+        "Resumen": [
+            (
+                "Cobertura especial sobre la elección y selección de delegados"
+                " para el Consejo Local de Planificación Pública en Mérida."
+            ),
+            (
+                "Reporte cultural detallando la muestra colectiva de veintitrés"
+                " artistas plásticos locales."
+            ),
+        ],
+    }
+    df = pd.DataFrame(data_inicial)
+    df.to_csv(DATA_FILE, index=False)
+    return df
 
 
 def save_data(df):
@@ -124,7 +150,7 @@ elif menu == "✍️ Registrar Nueva Nota":
             "Noticias Locales",
             "Comunidad",
             "Opinión",
-            * "Cultura",
+            "Cultura",
             "Deportes",
             "Memoria Histórica",
         ],
