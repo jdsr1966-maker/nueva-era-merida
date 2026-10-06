@@ -9,45 +9,35 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Archivo CSV local para almacenar las publicaciones de forma persistente
 DATA_FILE = "articulos.csv"
 
-# Inicializar archivo de datos con notas de prueba si no existe
-if not os.path.exists(DATA_FILE):
-    df_inicial = pd.DataFrame([
-        {
-            "Fecha": "2026-10-01",
-            "Sección": "Política",
-            "Título": "Avances en la gestión de servicios municipales en Mérida",
-            "Contenido": "Durante las mesas de trabajo desarrolladas en el Municipio Libertador, se evaluaron los planes de optimización de servicios públicos, destacando la participación articulada de las comunidades organizadas y los gabinetes sectoriales para dar respuesta oportuna a las solicitudes vecinales."
-        },
-        {
-            "Fecha": "2026-10-02",
-            "Sección": "Memoria Viva",
-            "Título": "Recordando el patrimonio histórico y cultural de nuestra ciudad",
-            "Contenido": "Un recorrido por la historia urbana y arquitectónica de Mérida, resaltando el valor de los espacios coloniales, la conservación del centro histórico y la memoria de sus principales plazas y monumentos tradicionales."
-        },
-        {
-            "Fecha": "2026-10-03",
-            "Sección": "Cultura",
-            "Título": "Gran éxito de la exposición artística en el centro cultural",
-            "Contenido": "Con la participación de más de veinte artistas plásticos locales, se inauguró la muestra confluencias, convirtiéndose en un punto de encuentro para el talento merideño y la ciudadanía."
-        },
-        {
-            "Fecha": "2026-10-05",
-            "Sección": "Institucional",
-            "Título": "Municipio Libertador instala Comisión Técnica para el Plan de Desarrollo Urbano",
-            "Contenido": "Con el objetivo de actualizar los instrumentos de ordenamiento territorial y zonificación, las autoridades municipales y los consejos locales de planificación instalaron formalmente la Comisión Técnica encargada de revisar el marco normativo histórico y adaptarlo a las necesidades actuales del municipio."
-        }
-    ])
-    df_inicial.to_csv(DATA_FILE, index=False)
-
-# Cargar datos
+# Cargar y asegurar que la estructura de datos sea correcta
 @st.cache_data(ttl=0)
 def cargar_datos():
     if os.path.exists(DATA_FILE):
-        return pd.read_csv(DATA_FILE)
-    return pd.DataFrame(columns=["Fecha", "Sección", "Título", "Contenido"])
+        df = pd.read_csv(DATA_FILE)
+        if "Contenido" not in df.columns:
+            df["Contenido"] = "Contenido en proceso de edición y redacción."
+        else:
+            df["Contenido"] = df["Contenido"].fillna("Contenido en proceso de edición y redacción.")
+        return df
+    else:
+        df_inicial = pd.DataFrame([
+            {
+                "Fecha": "2026-10-01",
+                "Sección": "Política",
+                "Título": "Avances en la gestión de servicios municipales en Mérida",
+                "Contenido": "Durante las mesas de trabajo desarrolladas en el Municipio Libertador, se evaluaron los planes de optimización de servicios públicos, destacando la participación articulada de las comunidades organizadas."
+            },
+            {
+                "Fecha": "2026-10-05",
+                "Sección": "Institucional",
+                "Título": "Municipio Libertador instala Comisión Técnica para el Plan de Desarrollo Urbano",
+                "Contenido": "Con el objetivo de actualizar los instrumentos de ordenamiento territorial y zonificación, las autoridades municipales y los consejos locales de planificación instalaron formalmente la Comisión Técnica."
+            }
+        ])
+        df_inicial.to_csv(DATA_FILE, index=False)
+        return df_inicial
 
 df = cargar_datos()
 
@@ -93,7 +83,11 @@ if menu == "📊 Tablero de Redacción":
                 st.write(f"**Fecha:** {row['Fecha']}")
                 st.write(f"**Sección:** {row['Sección']}")
                 st.markdown("---")
-                st.write(row['Contenido'])
+                contenido_texto = str(row['Contenido']).strip()
+                if contenido_texto and contenido_texto != "nan":
+                    st.write(contenido_texto)
+                else:
+                    st.warning("⚠️ Este artículo no tiene contenido registrado.")
     else:
         st.info("No hay publicaciones registradas todavía.")
 
@@ -120,12 +114,12 @@ elif menu == "✍️ Registrar / Cargar Artículo":
                 }])
                 df_updated = pd.concat([df, nueva_fila], ignore_index=True)
                 df_updated.to_csv(DATA_FILE, index=False)
-                st.success("✅ ¡Artículo publicado exitosamente! Ya puedes visualizarlo en el Visor por Secciones y en la Base de Datos Completa.")
+                st.success("✅ ¡Artículo publicado exitosamente! Ya puedes visualizarlo en el Visor por Secciones.")
                 st.balloons()
             else:
-                st.error("⚠️ Por favor completa el título y el contenido del artículo.")
+                st.error("⚠️ Por favor completa tanto el título como el contenido completo del artículo.")
 
-# 3. VISOR POR SECCIONES (CON LECTURA COMPLETA)
+# 3. VISOR POR SECCIONES
 elif menu == "📂 Visor por Secciones":
     st.title("📂 Visor Organizado por Secciones")
     st.markdown("Filtra las publicaciones por categoría y lee el contenido completo de cada artículo.")
@@ -138,7 +132,6 @@ elif menu == "📂 Visor por Secciones":
         df_filtrado = df[df["Sección"] == seccion_seleccionada]
         st.markdown(f"### Se encontraron {len(df_filtrado)} publicaciones en la sección **{seccion_seleccionada}**:")
         
-        # Selector de artículo para lectura detallada
         titulos_seccion = df_filtrado["Título"].tolist()
         articulo_elegido = st.selectbox("📖 Selecciona el artículo que deseas leer completo:", ["-- Elige una publicación --"] + titulos_seccion)
         
@@ -148,10 +141,14 @@ elif menu == "📂 Visor por Secciones":
             st.markdown(f"## 📰 {fila_articulo['Título']}")
             st.markdown(f"**📅 Fecha:** {fila_articulo['Fecha']} &nbsp;&nbsp;|&nbsp;&nbsp; **🏷️ Sección:** {fila_articulo['Sección']}")
             st.markdown("---")
-            st.write(fila_articulo["Contenido"])
+            
+            contenido_texto = str(fila_articulo["Contenido"]).strip()
+            if contenido_texto and contenido_texto != "nan":
+                st.write(contenido_texto)
+            else:
+                st.warning("⚠️ Esta publicación no tiene texto registrado en el cuerpo del artículo.")
             st.markdown("---")
         
-        # Mostrar tabla resumen debajo
         st.dataframe(df_filtrado[["Fecha", "Sección", "Título"]], use_container_width=True)
     else:
         st.info("No hay publicaciones registradas.")
@@ -170,7 +167,11 @@ elif menu == "🔍 Buscar en el Archivo":
             for idx, row in resultado.iterrows():
                 with st.expander(f"📌 [{row['Sección']}] {row['Título']} ({row['Fecha']})"):
                     st.write(f"**Fecha:** {row['Fecha']} | **Sección:** {row['Sección']}")
-                    st.write(row['Contenido'])
+                    contenido_texto = str(row['Contenido']).strip()
+                    if contenido_texto and contenido_texto != "nan":
+                        st.write(contenido_texto)
+                    else:
+                        st.warning("⚠️ Sin contenido registrado.")
         else:
             st.warning("No se encontraron artículos con ese término.")
 
@@ -191,6 +192,10 @@ elif menu == "🗂️ Base de Datos Completa":
             st.markdown(f"## 📰 {fila_db['Título']}")
             st.markdown(f"**📅 Fecha:** {fila_db['Fecha']} | **🏷️ Sección:** {fila_db['Sección']}")
             st.markdown("---")
-            st.write(fila_db["Contenido"])
+            contenido_texto = str(fila_db["Contenido"]).strip()
+            if contenido_texto and contenido_texto != "nan":
+                st.write(contenido_texto)
+            else:
+                st.warning("⚠️ Esta publicación no tiene texto registrado en el cuerpo del artículo.")
     else:
         st.info("La base de datos está vacía.")
