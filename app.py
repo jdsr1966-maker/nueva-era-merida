@@ -1,201 +1,56 @@
-import streamlit as st
-import pandas as pd
-import os
+El destacado artista plástico y pintor realista consolida una poética visual basada en la cotidianidad y la memoria familiar, mientras su obra audiovisual coronada en la Universidad de los Andes brilla en las pantallas del circuito nacional.
 
-st.set_page_config(
-    page_title="Nueva Era Mérida Digital",
-    page_icon="📰",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+Por: Nueva Era Mérida Digital 
 
-DATA_FILE = "articulos.csv"
+MÉRIDA.  En las arterias culturales de la ciudad de Mérida, donde el imponente paisaje andino se entrelaza con una profunda tradición intelectual y académica, emerge con fuerza propia la obra de Andrés Sandoval. Especializado en el retrato, la figura humana y la exploración de las raíces, este creador merideño se ha convertido en una de las voces más genuinas, rigurosas y sensibles de la plástica y la narrativa visual contemporánea en Venezuela.
 
-# Cargar y asegurar que la estructura de datos sea correcta
-@st.cache_data(ttl=0)
-def cargar_datos():
-    if os.path.exists(DATA_FILE):
-        df = pd.read_csv(DATA_FILE)
-        if "Contenido" not in df.columns:
-            df["Contenido"] = "Contenido en proceso de edición y redacción."
-        else:
-            df["Contenido"] = df["Contenido"].fillna("Contenido en proceso de edición y redacción.")
-        return df
-    else:
-        df_inicial = pd.DataFrame([
-            {
-                "Fecha": "2026-10-01",
-                "Sección": "Política",
-                "Título": "Avances en la gestión de servicios municipales en Mérida",
-                "Contenido": "Durante las mesas de trabajo desarrolladas en el Municipio Libertador, se evaluaron los planes de optimización de servicios públicos, destacando la participación articulada de las comunidades organizadas."
-            },
-            {
-                "Fecha": "2026-10-05",
-                "Sección": "Institucional",
-                "Título": "Municipio Libertador instala Comisión Técnica para el Plan de Desarrollo Urbano",
-                "Contenido": "Con el objetivo de actualizar los instrumentos de ordenamiento territorial y zonificación, las autoridades municipales y los consejos locales de planificación instalaron formalmente la Comisión Técnica."
-            }
-        ])
-        df_inicial.to_csv(DATA_FILE, index=False)
-        return df_inicial
+Su propuesta estética no busca la grandilocuencia lejana ni el artificio abstracto; por el contrario, encuentra la sublime belleza en lo íntimo: en las arrugas de la experiencia, en los espacios familiares, en las costumbres cotidianas y en la memoria viva de nuestra gente.
 
-df = cargar_datos()
 
-# Sidebar / Navegación
-st.sidebar.title("Nueva Era Mérida Digital")
-st.sidebar.markdown("**Sistema de Gestión y Archivo Editorial**")
-st.sidebar.markdown("---")
 
-menu = st.sidebar.radio(
-    "Navegación de Redacción:",
-    [
-        "📊 Tablero de Redacción",
-        "✍️ Registrar / Cargar Artículo",
-        "📂 Visor por Secciones",
-        "🔍 Buscar en el Archivo",
-        "🗂️ Base de Datos Completa"
-    ]
-)
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("🌐 www.nuevaerameridadigital.com")
 
-# 1. TABLERO DE REDACCIÓN
-if menu == "📊 Tablero de Redacción":
-    st.title("📊 Tablero General de Redacción")
-    st.markdown("Control estadístico y métricas editoriales de **Nueva Era Mérida Digital**.")
-    st.markdown("---")
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Total Artículos / Notas", len(df))
-    with col2:
-        secciones_unicas = df["Sección"].nunique() if not df.empty else 0
-        st.metric("Secciones Editoriales", secciones_unicas)
-    with col3:
-        st.metric("Medio", "Digital Web")
-        
-    st.markdown("---")
-    st.subheader("📋 Resumen Reciente")
-    if not df.empty:
-        for idx, row in df.tail(5).iterrows():
-            with st.expander(f"📌 [{row['Sección']}] {row['Título']} ({row['Fecha']})"):
-                st.write(f"**Fecha:** {row['Fecha']}")
-                st.write(f"**Sección:** {row['Sección']}")
-                st.markdown("---")
-                contenido_texto = str(row['Contenido']).strip()
-                if contenido_texto and contenido_texto != "nan":
-                    st.write(contenido_texto)
-                else:
-                    st.warning("⚠️ Este artículo no tiene contenido registrado.")
-    else:
-        st.info("No hay publicaciones registradas todavía.")
+Consagración nacional: El hito del Salón Arturo Michelena
 
-# 2. REGISTRAR / CARGAR ARTÍCULO
-elif menu == "✍️ Registrar / Cargar Artículo":
-    st.title("✍️ Registrar / Cargar Nuevo Artículo")
-    st.markdown("Ingrese los datos del nuevo artículo para publicarlo instantáneamente en el portal.")
-    st.markdown("---")
-    
-    with st.form("form_articulo"):
-        titulo = st.text_input("Título del Artículo / Nota")
-        seccion = st.selectbox("Sección Editorial", ["Política", "Institucional", "Cultura", "Memoria Viva", "Comunidades", "Opinión", "Deportes", "Especiales"])
-        fecha = st.date_input("Fecha de Publicación")
-        contenido = st.text_area("Cuerpo / Contenido Completo del Artículo", height=200)
-        
-        submitted = st.form_submit_button("Publicar en la App")
-        if submitted:
-            if titulo.strip() and contenido.strip():
-                nueva_fila = pd.DataFrame([{
-                    "Fecha": str(fecha),
-                    "Sección": seccion,
-                    "Título": titulo,
-                    "Contenido": contenido
-                }])
-                df_updated = pd.concat([df, nueva_fila], ignore_index=True)
-                df_updated.to_csv(DATA_FILE, index=False)
-                st.success("✅ ¡Artículo publicado exitosamente! Ya puedes visualizarlo en el Visor por Secciones.")
-                st.balloons()
-            else:
-                st.error("⚠️ Por favor completa tanto el título como el contenido completo del artículo.")
+La trayectoria de Sandoval ha sumado escalones fundamentales en los últimos años, consolidando una madurez técnica y conceptual que trasciende las fronteras regionales. Uno de los puntos más altos de este recorrido es la obtención de la Mención Honorífica en la 67ª edición del prestigioso Salón Arturo Michelena (2025), uno de los certámenes de artes visuales más exigentes y de mayor jerarquía histórica en Venezuela. Este galardón ratificó su dominio absoluto del óleo y el dibujo, situando su nombre entre los referentes más lúcidos del arte nacional actual.
 
-# 3. VISOR POR SECCIONES
-elif menu == "📂 Visor por Secciones":
-    st.title("📂 Visor Organizado por Secciones")
-    st.markdown("Filtra las publicaciones por categoría y lee el contenido completo de cada artículo.")
-    st.markdown("---")
-    
-    if not df.empty:
-        secciones_disponibles = df["Sección"].unique().tolist()
-        seccion_seleccionada = st.selectbox("Filtrar contenido por sección:", secciones_disponibles)
-        
-        df_filtrado = df[df["Sección"] == seccion_seleccionada]
-        st.markdown(f"### Se encontraron {len(df_filtrado)} publicaciones en la sección **{seccion_seleccionada}**:")
-        
-        titulos_seccion = df_filtrado["Título"].tolist()
-        articulo_elegido = st.selectbox("📖 Selecciona el artículo que deseas leer completo:", ["-- Elige una publicación --"] + titulos_seccion)
-        
-        st.markdown("---")
-        if articulo_elegido != "-- Elige una publicación --":
-            fila_articulo = df_filtrado[df_filtrado["Título"] == articulo_elegido].iloc[0]
-            st.markdown(f"## 📰 {fila_articulo['Título']}")
-            st.markdown(f"**📅 Fecha:** {fila_articulo['Fecha']} &nbsp;&nbsp;|&nbsp;&nbsp; **🏷️ Sección:** {fila_articulo['Sección']}")
-            st.markdown("---")
-            
-            contenido_texto = str(fila_articulo["Contenido"]).strip()
-            if contenido_texto and contenido_texto != "nan":
-                st.write(contenido_texto)
-            else:
-                st.warning("⚠️ Esta publicación no tiene texto registrado en el cuerpo del artículo.")
-            st.markdown("---")
-        
-        st.dataframe(df_filtrado[["Fecha", "Sección", "Título"]], use_container_width=True)
-    else:
-        st.info("No hay publicaciones registradas.")
 
-# 4. BUSCAR EN EL ARCHIVO
-elif menu == "🔍 Buscar en el Archivo":
-    st.title("🔍 Búsqueda en el Archivo Editorial")
-    st.markdown("Busca notas y artículos por palabras clave en el título o contenido.")
-    st.markdown("---")
-    
-    busqueda = st.text_input("Ingrese término de búsqueda (ej. Libertador, Cultura, etc.):")
-    if busqueda:
-        resultado = df[df["Título"].str.contains(busqueda, case=False, na=False) | df["Contenido"].str.contains(busqueda, case=False, na=False)]
-        st.markdown(f"### Resultados encontrados: {len(resultado)}")
-        if not resultado.empty:
-            for idx, row in resultado.iterrows():
-                with st.expander(f"📌 [{row['Sección']}] {row['Título']} ({row['Fecha']})"):
-                    st.write(f"**Fecha:** {row['Fecha']} | **Sección:** {row['Sección']}")
-                    contenido_texto = str(row['Contenido']).strip()
-                    if contenido_texto and contenido_texto != "nan":
-                        st.write(contenido_texto)
-                    else:
-                        st.warning("⚠️ Sin contenido registrado.")
-        else:
-            st.warning("No se encontraron artículos con ese término.")
 
-# 5. BASE DE DATOS COMPLETA
-elif menu == "🗂️ Base de Datos Completa":
-    st.title("🗂️ Base de Datos Completa de Redacción")
-    st.markdown("Registro general e histórico de todas las notas publicadas en el portal.")
-    st.markdown("---")
-    
-    if not df.empty:
-        st.dataframe(df, use_container_width=True)
-        
-        st.markdown("### 📖 Lector Rápido de Artículos")
-        titulos_todos = df["Título"].tolist()
-        articulo_db = st.selectbox("Seleccione un artículo de todo el archivo para leerlo:", ["-- Seleccionar --"] + titulos_todos)
-        if articulo_db != "-- Seleccionar --":
-            fila_db = df[df["Título"] == articulo_db].iloc[0]
-            st.markdown(f"## 📰 {fila_db['Título']}")
-            st.markdown(f"**📅 Fecha:** {fila_db['Fecha']} | **🏷️ Sección:** {fila_db['Sección']}")
-            st.markdown("---")
-            contenido_texto = str(fila_db["Contenido"]).strip()
-            if contenido_texto and contenido_texto != "nan":
-                st.write(contenido_texto)
-            else:
-                st.warning("⚠️ Esta publicación no tiene texto registrado en el cuerpo del artículo.")
-    else:
-        st.info("La base de datos está vacía.")
+
+
+Éxito cinematográfico: El triunfo de «El arte de recordar» en la ULA y su proyección en Alta Vista
+
+El talento multidisciplinario de Andrés Sandoval no se limita al caballete y al óleo sobre lienzo. Su profunda sensibilidad narrativa también ha conquistado la gran pantalla. Prueba de ello es el resonante éxito de su cortometraje «El arte de recordar», una obra audiovisual que se alzó con el máximo galardón como mejor cortometraje en los certámenes de la Universidad de los Andes (ULA).
+
+Este trabajo excepcional tuvo un momento estelar en la agenda cultural de este fin de semana: fue proyectado con gran éxito ayer domingo 4 de octubre en las salas de Cinex del Centro Comercial Alto Prado, en el marco de la jornada inaugural de la Muestra de Cine Venezolano «Reencuentro: El Origen». La pieza conmovió al público asistente, demostrando que la mirada de Sandoval sobre la memoria, la identidad y el afecto familiar posee una fuerza expresiva capaz de brillar tanto en el lienzo como en el séptimo arte.
+
+
+
+
+
+
+
+  Del taller a las galerías globales
+El pulso expositivo de Andrés Sandoval ha recorrido los espacios más emblemáticos de la región y plataformas de alcance internacional:
+
+MAMJAA Emergente (2021-2022): Su participación en la Colectiva de Dibujo e Ilustración en el Museo de Arte Moderno Juan Astorga Anta puso de relieve la precisión de su trazo desde las etapas iniciales de su carrera profesional.
+
+
+
+  Proyección internacional (2022): Su talento captó la atención de la crítica global al ser seleccionado en la cotizada colección “New This Week”, curada por Rebecca Wilson para la prestigiosa plataforma Saatchi Art.  
+“Reflejo de la cotidianidad” (2024): Su aclamada exposición individual presentada en la Galería La Otra Banda de Mérida, donde desnudó la cercanía de los afectos a través del retrato a gran escala. 
+
+
+
+ La poética de los afectos: El arte como archivo vivo
+La obra pictórica y audiovisual de Sandoval funciona como un archivo emocional insustituible. Lienzos memorables como La sobandera —un conmovedor tributo a las prácticas medicinales ancestrales de sus abuelos y a las figuras populares de la venezolanidad— y piezas de gran formato como Chón pelando papas (2025) demuestran una impecable destreza técnica unida a una profunda carga antropológica. Ya sea con los pinceles o tras la cámara, la cotidianidad se convierte en sus manos en documento histórico y en poesía visual.  
+
+Compromiso con el porvenir cultural de Mérida
+
+Más allá de su labor creativa, Sandoval mantiene un firme compromiso con la formación y el estímulo de las nuevas generaciones de creadores, participando en muestras compartidas en museos locales que dinamizan el circuito expositivo del estado. En un momento donde Mérida ratifica su vocación como capital del cine y del pensamiento nacional, la obra de Andrés Sandoval nos recuerda que en las raíces de la familia y en la verdad de nuestro pueblo reside la materia prima de la universalidad estética.
+
+Desde Nueva Era Mérida Digital, celebramos y difundimos la trayectoria integral de este baluarte de las artes plásticas y el cine merideño, cuya obra continúa dignificando nuestro gentilicio dentro y fuera de las fronteras nacionales.
+
+"La participación ciudadana en la información"
+
+
