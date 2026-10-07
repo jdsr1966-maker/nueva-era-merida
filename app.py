@@ -152,9 +152,7 @@ modo_admin = False
 password_input = st.sidebar.text_input(
     "Contraseña de Administrador", type="password"
 )
-ADMIN_PASSWORD = (
-    "Geor.0307"  # <-- AQUÍ PUEDES CAMBIAR TU CLAVE POR UNA MÁS SEGURA
-)
+ADMIN_PASSWORD = "merida2026"
 
 if password_input == ADMIN_PASSWORD:
   st.sidebar.success("✅ Modo Redacción Activo")
@@ -294,11 +292,17 @@ else:
             if not img_path_saved:
               img_path_saved = ""
 
-          nuevo_id = (
-              int(df_articles["ID"].max()) + 1
-              if not df_articles.empty and "ID" in df_articles.columns
-              else 1
-          )
+          # Cálculo seguro del nuevo ID para evitar errores
+          try:
+            if not df_articles.empty and "ID" in df_articles.columns:
+              valid_ids = pd.to_numeric(df_articles["ID"], errors="coerce")
+              nuevo_id = (
+                  int(valid_ids.max()) + 1 if not valid_ids.isna().all() else 1
+              )
+            else:
+              nuevo_id = 1
+          except Exception:
+            nuevo_id = len(df_articles) + 1
 
           nueva_fila = pd.DataFrame(
               [{
@@ -334,3 +338,4 @@ else:
             save_data(df_articles)
             st.success("Noticia eliminada correctamente.")
             st.rerun()
+                
