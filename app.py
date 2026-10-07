@@ -55,7 +55,7 @@ def extraer_imagen_og(url):
       if match:
         return match.group(1)
 
-      # 2. Si no está en og:image, buscar la primera imagen dentro del contenido de la noticia
+      # 2. Si no está en og:image, buscar la primera imagen dentro del contenido
       match_img = re.search(
           r'<img[^>]+src=["\'](https?://[^"\']+\.(?:jpg|jpeg|png|webp))["\']',
           html,
@@ -132,7 +132,6 @@ df_articles = load_data()
 # --- BARRA LATERAL ---
 st.sidebar.markdown("### 📰 Nueva Era Mérida Digital")
 
-# Carga segura del logo principal de la barra lateral
 logo_file = "logo.jpg"
 for fname in ["logo.jpg", "logo.png", "logo.jpeg", "Logo.png", "Logo.jpg"]:
   if os.path.exists(fname):
@@ -199,44 +198,60 @@ if not modo_admin:
     else:
       for index, row in df_filtered.iloc[::-1].iterrows():
         with st.container():
-          col_img, col_txt = st.columns([1, 2])
+          img_path = str(row["Imagen"]).strip()
+          enlace_noticia = str(row["Enlace Web"]).strip()
 
-          with col_img:
-            img_path = str(row["Imagen"]).strip()
-            enlace_noticia = str(row["Enlace Web"]).strip()
+          # Verificar si tiene imagen activa o si fue marcado sin imagen
+          mostrar_imagen = True
+          if (
+              img_path == "SIN_IMAGEN"
+              or img_path == "nan"
+              or img_path == ""
+          ):
+            mostrar_imagen = False
+          elif (
+              not img_path
+              or img_path == "nan"
+              or img_path.startswith("uploaded_images")
+          ):
+            if enlace_noticia and enlace_noticia.startswith("http"):
+              img_path = extraer_imagen_og(enlace_noticia)
+              if not img_path:
+                mostrar_imagen = False
 
-            # Extraer automáticamente al vuelo usando el link web si no hay imagen fija
-            if (
-                not img_path
-                or img_path == "nan"
-                or img_path.startswith("uploaded_images")
-            ):
-              if enlace_noticia and enlace_noticia.startswith("http"):
-                img_path = extraer_imagen_og(enlace_noticia)
-
-            if img_path and img_path.startswith("http"):
+          # Si tiene imagen válida, se muestra en dos columnas (Foto | Texto)
+          if mostrar_imagen and img_path and img_path.startswith("http"):
+            col_img, col_txt = st.columns([1, 2])
+            with col_img:
               try:
                 st.image(img_path, use_container_width=True)
               except Exception:
-                st.info("📰 Noticia")
-            elif img_path and os.path.exists(img_path):
-              try:
-                st.image(img_path, use_container_width=True)
-              except Exception:
-                st.info("📰 Noticia")
-            else:
-              st.info("📰 Nueva Era Mérida")
-
-          with col_txt:
+                pass
+            with col_txt:
+              st.markdown(f"### {row['Título']}")
+              st.caption(
+                  f"📁 **Sección:** {row['Sección']} | ✍️ **Autor:**"
+                  f" {row['Autor']} | 📅 **Fecha:** {row['Fecha']}"
+              )
+              if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
+                st.write(row["Resumen"])
+              if enlace_noticia and enlace_noticia != "nan":
+                if not enlace_noticia.startswith("http"):
+                  enlace_noticia = "https://" + enlace_noticia
+                st.markdown(
+                    f"🔗 **[Leer noticia completa en la"
+                    f" Web]({enlace_noticia})**",
+                    unsafe_allow_html=True,
+                )
+          else:
+            # Si NO lleva imagen (artículos de opinión / texto completo)
             st.markdown(f"### {row['Título']}")
             st.caption(
                 f"📁 **Sección:** {row['Sección']} | ✍️ **Autor:**"
                 f" {row['Autor']} | 📅 **Fecha:** {row['Fecha']}"
             )
-
             if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
               st.write(row["Resumen"])
-
             if enlace_noticia and enlace_noticia != "nan":
               if not enlace_noticia.startswith("http"):
                 enlace_noticia = "https://" + enlace_noticia
@@ -260,13 +275,20 @@ else:
     with st.form("form_nueva_nota_admin", clear_on_submit=True):
       titulo = st.text_input("Título de la Noticia")
       seccion = st.selectbox("Sección", SECCIONES_OFICIALES)
-      autor = st.text_input("Autor / Redactor", value="Equipo Editorial")
+      autor = st.text_input("Autor / Redactor", value="Jorge Sandoval")
       fecha = st.date_input("Fecha de Publicación")
       enlace_web = st.text_input(
-          "Enlace Web del Artículo (Blogger)",
+          "Enlace Web Específico del Artículo (Blogger)",
           value="https://www.nuevaerameridadigital.com",
       )
       resumen = st.text_area("Resumen o Bajada de la Noticia")
+
+      # Casilla para decidir si lleva foto o es artículo de opinión sin foto
+      incluir_foto = st.checkbox(
+          "🖼️ Incluir imagen de portada (desmarcar para artículos de opinión"
+          " o notas sin foto)",
+          value=True,
+      )
 
       submit_btn = st.form_submit_button(label="Publicar Noticia en el Portal")
 
@@ -274,8 +296,10 @@ else:
         if not titulo.strip():
           st.warning("El título es obligatorio.")
         else:
-          # Extraer automáticamente la foto desde el link web al registrar
-          img_path_saved = extraer_imagen_og(enlace_web)
+          if incluir_foto:
+            img_path_saved = extraer_imagen_og(enlace_web)
+          else:
+            img_path_saved = "SIN_IMAGEN"
 
           nuevo_id = (
               int(df_articles["ID"].max()) + 1
@@ -297,15 +321,11 @@ else:
           )
           df_articles = pd.concat([df_articles, nueva_fila], ignore_index=True)
           save_data(df_articles)
-          st.success(
-              "¡Noticia publicada con éxito y fotografía extraída del link!"
-          )
+          st.success("¡Noticia publicada con éxito en el portal!")
           st.balloons()
 
   with tab2:
-    st.markdown(
-        "### Eliminar Publicaciones Duplicadas o Fuera de Vigencia"
-    )
+    st.markdown("### Eliminar Publicaciones o Artículos")
     if df_articles.empty:
       st.info("No hay notas registradas para administrar.")
     else:
