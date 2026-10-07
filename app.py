@@ -198,28 +198,48 @@ if not modo_admin:
     else:
       for index, row in df_filtered.iloc[::-1].iterrows():
         with st.container():
-          img_path = str(row["Imagen"]).strip()
-          enlace_noticia = str(row["Enlace Web"]).strip()
           seccion_actual = str(row["Sección"]).strip()
+          enlace_noticia = str(row["Enlace Web"]).strip()
+          img_path = str(row["Imagen"]).strip()
 
-          mostrar_imagen = True
-
-          # REGLA: Los artículos de Opinión nunca llevan foto
+          # Si es artículo de Opinión, se muestra limpio sin foto
           if seccion_actual == "Opinión":
-            mostrar_imagen = False
-          elif img_path in ["SIN_IMAGEN", "nan", ""]:
-            mostrar_imagen = False
-          elif not img_path.startswith("http"):
-            mostrar_imagen = False
+            st.markdown(f"### {row['Título']}")
+            st.caption(
+                f"📁 **Sección:** {row['Sección']} | ✍️ **Autor:**"
+                f" {row['Autor']} | 📅 **Fecha:** {row['Fecha']}"
+            )
+            if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
+              st.write(row["Resumen"])
+            if enlace_noticia and enlace_noticia != "nan":
+              if not enlace_noticia.startswith("http"):
+                enlace_noticia = "https://" + enlace_noticia
+              st.markdown(
+                  f"🔗 **[Leer noticia completa en la"
+                  f" Web]({enlace_noticia})**",
+                  unsafe_allow_html=True,
+              )
+          else:
+            # Para las demás secciones: extraer foto si no está guardada
+            if (
+                not img_path
+                or img_path == "nan"
+                or img_path == "SIN_IMAGEN"
+                or img_path.startswith("uploaded_images")
+            ):
+              if enlace_noticia and enlace_noticia.startswith("http"):
+                img_path = extraer_imagen_og(enlace_noticia)
 
-          # Mostrar con o sin imagen según corresponda
-          if mostrar_imagen and img_path.startswith("http"):
             col_img, col_txt = st.columns([1, 2])
             with col_img:
-              try:
-                st.image(img_path, use_container_width=True)
-              except Exception:
-                pass
+              if img_path and img_path.startswith("http"):
+                try:
+                  st.image(img_path, use_container_width=True)
+                except Exception:
+                  st.info("📰 Noticia")
+              else:
+                st.info("📰 Nueva Era Mérida")
+
             with col_txt:
               st.markdown(f"### {row['Título']}")
               st.caption(
@@ -236,23 +256,6 @@ if not modo_admin:
                     f" Web]({enlace_noticia})**",
                     unsafe_allow_html=True,
                 )
-          else:
-            # Vista limpia sin imagen (Artículos de opinión o notas sin foto)
-            st.markdown(f"### {row['Título']}")
-            st.caption(
-                f"📁 **Sección:** {row['Sección']} | ✍️ **Autor:**"
-                f" {row['Autor']} | 📅 **Fecha:** {row['Fecha']}"
-            )
-            if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
-              st.write(row["Resumen"])
-            if enlace_noticia and enlace_noticia != "nan":
-              if not enlace_noticia.startswith("http"):
-                enlace_noticia = "https://" + enlace_noticia
-              st.markdown(
-                  f"🔗 **[Leer noticia completa en la"
-                  f" Web]({enlace_noticia})**",
-                  unsafe_allow_html=True,
-              )
 
           st.markdown("---")
 
@@ -274,10 +277,6 @@ else:
           "Enlace Web Específico del Artículo (Blogger)",
           value="https://www.nuevaerameridadigital.com",
       )
-      imagen_manual = st.text_input(
-          "URL Directa de la Imagen (Opcional - Pega aquí el link de la foto"
-          " si deseas asegurarla)"
-      )
       resumen = st.text_area("Resumen o Bajada de la Noticia")
 
       submit_btn = st.form_submit_button(label="Publicar Noticia en el Portal")
@@ -288,12 +287,10 @@ else:
         else:
           if seccion == "Opinión":
             img_path_saved = "SIN_IMAGEN"
-          elif imagen_manual.strip().startswith("http"):
-            img_path_saved = imagen_manual.strip()
           else:
             img_path_saved = extraer_imagen_og(enlace_web)
             if not img_path_saved:
-              img_path_saved = "SIN_IMAGEN"
+              img_path_saved = ""
 
           nuevo_id = (
               int(df_articles["ID"].max()) + 1
