@@ -4,12 +4,12 @@ import urllib.request
 import pandas as pd
 import streamlit as st
 
-# Configuración de página
+# Configuración de página optimizada para móvil
 st.set_page_config(
-    page_title="Nueva Era Mérida Digital", page_icon="📰", layout="wide"
+    page_title="Nueva Era Mérida Digital", page_icon="📰", layout="centered"
 )
 
-# Ocultar herramientas de deploy/GitHub manteniendo visible el menú y la barra lateral
+# Ocultar herramientas de deploy/GitHub para mantener el portal limpio
 st.markdown(
     """
     <style>
@@ -50,7 +50,6 @@ def extraer_imagen_og(url):
     with urllib.request.urlopen(req, timeout=6) as response:
       html = response.read().decode("utf-8", errors="ignore")
 
-      # 1. Buscar la etiqueta oficial og:image que usan los portales y Blogger
       match = re.search(
           r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
           html,
@@ -65,7 +64,6 @@ def extraer_imagen_og(url):
       if match:
         return match.group(1)
 
-      # 2. Si no está en og:image, buscar la primera imagen dentro del contenido
       match_img = re.search(
           r'<img[^>]+src=["\'](https?://[^"\']+\.(?:jpg|jpeg|png|webp))["\']',
           html,
@@ -99,7 +97,6 @@ def load_data():
     except Exception:
       pass
 
-  # Datos iniciales de ejemplo
   data_inicial = {
       "ID": [1, 2],
       "Fecha": ["2026-10-02", "2026-09-25"],
@@ -139,51 +136,28 @@ def save_data(df):
 
 df_articles = load_data()
 
-# --- BARRA LATERAL ---
-st.sidebar.markdown("### 📰 Nueva Era Mérida Digital")
-
-logo_file = "logo.jpg"
-for fname in ["logo.jpg", "logo.png", "logo.jpeg", "Logo.png", "Logo.jpg"]:
-  if os.path.exists(fname):
-    logo_file = fname
-    break
-
-if os.path.exists(logo_file):
-  try:
-    st.sidebar.image(logo_file, use_container_width=True)
-  except Exception:
-    pass
-
-st.sidebar.markdown("---")
-
-# Sistema de Acceso de Redacción Protegido
-st.sidebar.markdown("### 🔐 Acceso de Redacción")
-modo_admin = False
-password_input = st.sidebar.text_input(
-    "Contraseña de Administrador", type="password"
-)
-ADMIN_PASSWORD = "merida2026"
-
-if password_input == ADMIN_PASSWORD:
-  st.sidebar.success("✅ Modo Redacción Activo")
-  modo_admin = True
-elif password_input != "":
-  st.sidebar.error("Contraseña incorrecta")
-
-st.sidebar.markdown("---")
-st.sidebar.markdown(
-    "**Portal Web Oficial (Blogger):**\n[Visitar"
-    " www.nuevaerameridadigital.com](https://www.nuevaerameridadigital.com)"
-)
-st.sidebar.markdown(
-    "<small>Depósito Legal: ME2026000169</small>", unsafe_allow_html=True
-)
-
-# --- CUERPO PRINCIPAL ---
+# --- CABECERA Y ACCESO DE REDACCIÓN DIRECTO PARA MÓVIL ---
 st.title("📰 Nueva Era Mérida Digital")
 st.markdown(
     "*Portal Informativo y Archivo Oficial — Mérida, Venezuela*"
 )
+st.markdown("---")
+
+# Sistema de Acceso de Redacción Directo en Pantalla
+with st.expander("🔐 Acceso de Redacción (Administrador)", expanded=False):
+  password_input = st.text_input(
+      "Ingrese Contraseña de Administrador", type="password"
+  )
+
+modo_admin = False
+ADMIN_PASSWORD = "merida2026"
+
+if password_input == ADMIN_PASSWORD:
+  st.success("✅ Modo Redacción Activo")
+  modo_admin = True
+elif password_input != "":
+  st.error("Contraseña incorrecta")
+
 st.markdown("---")
 
 if not modo_admin:
@@ -212,7 +186,6 @@ if not modo_admin:
           enlace_noticia = str(row["Enlace Web"]).strip()
           img_path = str(row["Imagen"]).strip()
 
-          # Si es artículo de Opinión, se muestra limpio sin foto
           if seccion_actual == "Opinión":
             st.markdown(f"### {row['Título']}")
             st.caption(
@@ -230,7 +203,6 @@ if not modo_admin:
                   unsafe_allow_html=True,
               )
           else:
-            # Para las demás secciones: extraer foto si no está guardada
             if (
                 not img_path
                 or img_path == "nan"
@@ -240,32 +212,27 @@ if not modo_admin:
               if enlace_noticia and enlace_noticia.startswith("http"):
                 img_path = extraer_imagen_og(enlace_noticia)
 
-            col_img, col_txt = st.columns([1, 2])
-            with col_img:
-              if img_path and img_path.startswith("http"):
-                try:
-                  st.image(img_path, use_container_width=True)
-                except Exception:
-                  st.info("📰 Noticia")
-              else:
-                st.info("📰 Nueva Era Mérida")
+            if img_path and img_path.startswith("http"):
+              try:
+                st.image(img_path, use_container_width=True)
+              except Exception:
+                st.info("📰 Noticia")
 
-            with col_txt:
-              st.markdown(f"### {row['Título']}")
-              st.caption(
-                  f"📁 **Sección:** {row['Sección']} | ✍️ **Autor:**"
-                  f" {row['Autor']} | 📅 **Fecha:** {row['Fecha']}"
+            st.markdown(f"### {row['Título']}")
+            st.caption(
+                f"📁 **Sección:** {row['Sección']} | ✍️ **Autor:**"
+                f" {row['Autor']} | 📅 **Fecha:** {row['Fecha']}"
+            )
+            if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
+              st.write(row["Resumen"])
+            if enlace_noticia and enlace_noticia != "nan":
+              if not enlace_noticia.startswith("http"):
+                enlace_noticia = "https://" + enlace_noticia
+              st.markdown(
+                  f"🔗 **[Leer noticia completa en la"
+                  f" Web]({enlace_noticia})**",
+                  unsafe_allow_html=True,
               )
-              if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
-                st.write(row["Resumen"])
-              if enlace_noticia and enlace_noticia != "nan":
-                if not enlace_noticia.startswith("http"):
-                  enlace_noticia = "https://" + enlace_noticia
-                st.markdown(
-                    f"🔗 **[Leer noticia completa en la"
-                    f" Web]({enlace_noticia})**",
-                    unsafe_allow_html=True,
-                )
 
           st.markdown("---")
 
@@ -302,7 +269,6 @@ else:
             if not img_path_saved:
               img_path_saved = ""
 
-          # Cálculo seguro del nuevo ID para evitar errores
           try:
             if not df_articles.empty and "ID" in df_articles.columns:
               valid_ids = pd.to_numeric(df_articles["ID"], errors="coerce")
@@ -348,4 +314,12 @@ else:
             save_data(df_articles)
             st.success("Noticia eliminada correctamente.")
             st.rerun()
-                  
+
+st.markdown(
+    "<div style='text-align: center; color: gray;'><small>Portal Web Oficial"
+    " (Blogger): <a href='https://www.nuevaerameridadigital.com'>Visitar"
+    " www.nuevaerameridadigital.com</a><br>Depósito Legal:"
+    " ME2026000169</small></div>",
+    unsafe_allow_html=True,
+                )
+
