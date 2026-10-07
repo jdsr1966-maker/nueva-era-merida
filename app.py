@@ -9,6 +9,16 @@ st.set_page_config(
     page_title="Nueva Era Mérida Digital", page_icon="📰", layout="wide"
 )
 
+# Ocultar la barra superior y el enlace de GitHub para los lectores
+st.markdown(
+    """
+    <style>
+    [data-testid="stHeader"] {visibility: hidden; display: none;}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 DATA_FILE = "articles.csv"
 IMAGES_DIR = "uploaded_images"
 os.makedirs(IMAGES_DIR, exist_ok=True)
@@ -152,7 +162,7 @@ modo_admin = False
 password_input = st.sidebar.text_input(
     "Contraseña de Administrador", type="password"
 )
-ADMIN_PASSWORD = "Geor.0307"
+ADMIN_PASSWORD = "merida2026"
 
 if password_input == ADMIN_PASSWORD:
   st.sidebar.success("✅ Modo Redacción Activo")
@@ -338,4 +348,3 @@ else:
             save_data(df_articles)
             st.success("Noticia eliminada correctamente.")
             st.rerun()
-                
