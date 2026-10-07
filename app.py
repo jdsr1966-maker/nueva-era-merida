@@ -2,24 +2,15 @@ import os
 import pandas as pd
 import streamlit as st
 
-# Buscar el logo oficial para usarlo como icono de la aplicación (favicon en móvil y laptop)
-logo_file = "logo.jpg"
-for fname in ["logo.jpg", "logo.png", "logo.jpeg", "Logo.png", "Logo.jpg"]:
-  if os.path.exists(fname):
-    logo_file = fname
-    break
-
-# Configuración general de la página
+# Configuración de página
 st.set_page_config(
-    page_title="Nueva Era Mérida Digital",
-    page_icon=logo_file if os.path.exists(logo_file) else "📰",
-    layout="wide",
+    page_title="Nueva Era Mérida Digital", page_icon="📰", layout="wide"
 )
 
-# Archivo local para persistir los artículos y notas
 DATA_FILE = "articles.csv"
+IMAGES_DIR = "uploaded_images"
+os.makedirs(IMAGES_DIR, exist_ok=True)
 
-# Secciones oficiales solicitadas
 SECCIONES_OFICIALES = [
     "Opinión",
     "Comunidades",
@@ -35,22 +26,26 @@ def load_data():
   if os.path.exists(DATA_FILE):
     try:
       df = pd.read_csv(DATA_FILE)
-      # Sanitización automática de URLs malformadas de raíz
-      if "Enlace Web" in df.columns:
-        df["Enlace Web"] = df["Enlace Web"].astype(str)
-        # Corregir si se duplicó https:// o contiene errores de tipeo
-        df.loc[
-            df["Enlace Web"].str.contains("https://.*https://"), "Enlace Web"
-        ] = "https://www.nuevaerameridadigital.com"
-        df["Enlace Web"] = df["Enlace Web"].replace(
-            "nan", "https://www.nuevaerameridadigital.com"
-        )
+      expected_cols = [
+          "ID",
+          "Fecha",
+          "Título",
+          "Sección",
+          "Autor",
+          "Enlace Web",
+          "Resumen",
+          "Imagen",
+      ]
+      for col in expected_cols:
+        if col not in df.columns:
+          df[col] = ""
       return df
     except Exception:
       pass
 
-  # Notas iniciales limpias y correctas
+  # Datos iniciales de ejemplo
   data_inicial = {
+      "ID": [1, 2],
       "Fecha": ["2026-10-02", "2026-09-25"],
       "Título": [
           "Selección de delegados parroquiales y sectoriales del CLPP",
@@ -75,6 +70,7 @@ def load_data():
               " artistas plásticos locales."
           ),
       ],
+      "Imagen": ["", ""],
   }
   df = pd.DataFrame(data_inicial)
   df.to_csv(DATA_FILE, index=False)
@@ -85,25 +81,41 @@ def save_data(df):
   df.to_csv(DATA_FILE, index=False)
 
 
-# Cargar base de datos sanitizada
 df_articles = load_data()
 
 # --- BARRA LATERAL ---
 st.sidebar.markdown("### 📰 Nueva Era Mérida Digital")
 
-# Carga segura del logo en la barra lateral
+# Carga segura del logo
+logo_file = "logo.jpg"
+for fname in ["logo.jpg", "logo.png", "logo.jpeg", "Logo.png", "Logo.jpg"]:
+  if os.path.exists(fname):
+    logo_file = fname
+    break
+
 if os.path.exists(logo_file):
   try:
     st.sidebar.image(logo_file, use_container_width=True)
   except Exception:
-    st.sidebar.info("Panel de Redacción y Archivo")
-else:
-  st.sidebar.info("Panel de Redacción y Archivo")
+    pass
 
 st.sidebar.markdown("---")
-menu = st.sidebar.radio(
-    "Menú de Navegación", ["📖 Ver Archivo de Notas", "✍️ Registrar Nueva Nota"]
+
+# Sistema de Acceso de Redacción Protegido
+st.sidebar.markdown("### 🔐 Acceso de Redacción")
+modo_admin = False
+password_input = st.sidebar.text_input(
+    "Contraseña de Administrador", type="password"
 )
+ADMIN_PASSWORD = (
+    "merida2026"  # Puedes cambiar esta contraseña cuando gustes
+)
+
+if password_input == ADMIN_PASSWORD:
+  st.sidebar.success("✅ Modo Redacción Activo")
+  modo_admin = True
+elif password_input != "":
+  st.sidebar.error("Contraseña incorrecta")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
@@ -114,101 +126,144 @@ st.sidebar.markdown(
     "<small>Depósito Legal: ME2026000169</small>", unsafe_allow_html=True
 )
 
-# Herramienta de mantenimiento de raíz en la barra lateral
-with st.sidebar.expander("⚙️ Mantenimiento"):
-  if st.button("🔄 Reiniciar Archivo de Notas"):
-    if os.path.exists(DATA_FILE):
-      os.remove(DATA_FILE)
-    st.rerun()
-
-# --- CUERPO PRINCIPAL DE LA APLICACIÓN ---
+# --- CUERPO PRINCIPAL ---
 st.title("📰 Nueva Era Mérida Digital")
 st.markdown(
-    "*Sistema de Gestión Editorial y Archivo Informativo — Mérida, Venezuela*"
+    "*Portal Informativo y Archivo Oficial — Mérida, Venezuela*"
 )
 st.markdown("---")
 
-if menu == "📖 Ver Archivo de Notas":
-  st.subheader("Archivo de Publicaciones y Enlaces Web")
+if not modo_admin:
+  # --- VISTA PÚBLICA (LECTORES) ---
+  st.subheader("Últimas Publicaciones")
 
   if df_articles.empty:
-    st.info("No hay notas registradas todavía.")
+    st.info("No hay publicaciones disponibles en este momento.")
   else:
     secciones_disponibles = ["Todas"] + SECCIONES_OFICIALES
-    seccion_filtro = st.selectbox("Filtrar por Sección", secciones_disponibles)
+    seccion_filtro = st.selectbox(
+        "Filtrar por Sección Informativa", secciones_disponibles
+    )
 
     if seccion_filtro != "Todas":
       df_filtered = df_articles[df_articles["Sección"] == seccion_filtro]
     else:
       df_filtered = df_articles
 
-    st.markdown(f"**Registros encontrados:** {len(df_filtered)}")
-    st.markdown("---")
-
     if df_filtered.empty:
-      st.info(f"No hay notas registradas en la sección '{seccion_filtro}' aún.")
+      st.info(f"No hay notas en la sección '{seccion_filtro}' todavía.")
     else:
-      for index, row in df_filtered.iterrows():
+      for index, row in df_filtered.iloc[::-1].iterrows():
         with st.container():
-          st.markdown(f"### {row['Título']}")
+          col_img, col_txt = st.columns([1, 2])
 
-          col1, col2, col3 = st.columns(3)
-          with col1:
-            st.markdown(f"**Sección:** {row['Sección']}")
-          with col2:
-            st.markdown(f"**Autor:** {row['Autor']}")
-          with col3:
-            st.markdown(f"**Fecha:** {row['Fecha']}")
+          with col_img:
+            img_path = str(row["Imagen"])
+            if img_path and os.path.exists(img_path):
+              st.image(img_path, use_container_width=True)
+            else:
+              if os.path.exists(logo_file):
+                st.image(logo_file, use_container_width=True)
+              else:
+                st.info("Nueva Era Mérida")
 
-          if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
-            st.markdown(f"*{row['Resumen']}*")
+          with col_txt:
+            st.markdown(f"### {row['Título']}")
+            st.caption(
+                f"📁 **Sección:** {row['Sección']} | ✍️ **Autor:**"
+                f" {row['Autor']} | 📅 **Fecha:** {row['Fecha']}"
+            )
 
-          if pd.notna(row["Enlace Web"]) and str(row["Enlace Web"]).strip() != "":
-            st.markdown(f"🔗 **[Abrir enlace en la Web]({row['Enlace Web']})**")
+            if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
+              st.write(row["Resumen"])
+
+            enlace = str(row["Enlace Web"]).strip()
+            if enlace and enlace != "nan":
+              if not enlace.startswith("http"):
+                enlace = "https://" + enlace
+              st.markdown(
+                  f"🔗 **[Leer noticia completa en la"
+                  f" Web]({enlace})**",
+                  unsafe_allow_html=True,
+              )
 
           st.markdown("---")
 
-elif menu == "✍️ Registrar Nueva Nota":
-  st.subheader("Registrar Nueva Nota o Enlace")
+else:
+  # --- VISTA DE ADMINISTRACIÓN (REDACCIÓN Y ELIMINACIÓN) ---
+  st.subheader("🛠️ Panel de Control y Gestión Editorial")
 
-  with st.form("form_nueva_nota"):
-    titulo = st.text_input("Título de la Nota / Artículo")
-    seccion = st.selectbox("Sección", SECCIONES_OFICIALES)
-    autor = st.text_input("Autor / Redactor", value="Equipo Editorial")
-    fecha = st.date_input("Fecha de Publicación")
-    enlace_web = st.text_input(
-        "Enlace Web (URL del artículo en Blogger)",
-        value="https://www.nuevaerameridadigital.com",
+  tab1, tab2 = st.tabs(
+      ["✍️ Registrar Nueva Noticia", "🗑️ Gestionar y Eliminar Noticias"]
+  )
+
+  with tab1:
+    with st.form("form_nueva_nota_admin", clear_on_submit=True):
+      titulo = st.text_input("Título de la Noticia")
+      seccion = st.selectbox("Sección", SECCIONES_OFICIALES)
+      autor = st.text_input("Autor / Redactor", value="Equipo Editorial")
+      fecha = st.date_input("Fecha de Publicación")
+      enlace_web = st.text_input(
+          "Enlace Web del Artículo (Blogger)",
+          value="https://www.nuevaerameridadigital.com",
+      )
+      resumen = st.text_area("Resumen o Bajada de la Noticia")
+
+      imagen_subida = st.file_uploader(
+          "Fotografía Destacada de la Noticia", type=["jpg", "jpeg", "png"]
+      )
+
+      submit_btn = st.form_submit_button(label="Publicar Noticia en el Portal")
+
+      if submit_btn:
+        if not titulo.strip():
+          st.warning("El título es obligatorio.")
+        else:
+          img_path_saved = ""
+          if imagen_subida is not None:
+            img_path_saved = os.path.join(IMAGES_DIR, imagen_subida.name)
+            with open(img_path_saved, "wb") as f:
+              f.write(imagen_subida.getbuffer())
+
+          nuevo_id = (
+              int(df_articles["ID"].max()) + 1
+              if not df_articles.empty and "ID" in df_articles.columns
+              else 1
+          )
+
+          nueva_fila = pd.DataFrame(
+              [{
+                  "ID": nuevo_id,
+                  "Fecha": str(fecha),
+                  "Título": titulo,
+                  "Sección": seccion,
+                  "Autor": autor,
+                  "Enlace Web": enlace_web,
+                  "Resumen": resumen,
+                  "Imagen": img_path_saved,
+              }]
+          )
+          df_articles = pd.concat([df_articles, nueva_fila], ignore_index=True)
+          save_data(df_articles)
+          st.success("¡Noticia publicada con éxito en el portal!")
+          st.balloons()
+
+  with tab2:
+    st.markdown(
+        "### Eliminar Publicaciones Duplicadas o Fuera de Vigencia"
     )
-    resumen = st.text_area("Resumen o Bajada de la Nota")
-
-    submit_button = st.form_submit_button(
-        label="Guardar y Publicar en el Archivo"
-    )
-
-    if submit_button:
-      if titulo.strip() == "":
-        st.warning("Por favor, ingresa al menos el título de la nota.")
-      else:
-        # Validación automática para prevenir el error de tipeo en la URL
-        enlace_limpio = enlace_web.strip()
-        if (
-            not enlace_limpio.startswith("http://")
-            and not enlace_limpio.startswith("https://")
-        ):
-          enlace_limpio = "https://" + enlace_limpio
-
-        nueva_fila = pd.DataFrame(
-            [{
-                "Fecha": str(fecha),
-                "Título": titulo,
-                "Sección": seccion,
-                "Autor": autor,
-                "Enlace Web": enlace_limpio,
-                "Resumen": resumen,
-            }]
-        )
-        df_articles = pd.concat([df_articles, nueva_fila], ignore_index=True)
-        save_data(df_articles)
-        st.success("¡Nota guardada y registrada con éxito en el archivo!")
-        st.balloons()
+    if df_articles.empty:
+      st.info("No hay notas registradas para administrar.")
+    else:
+      for idx, row in df_articles.iterrows():
+        col_a, col_b = st.columns([4, 1])
+        with col_a:
+          st.markdown(
+              f"**[{row['Sección']}] {row['Título']}** ({row['Fecha']})"
+          )
+        with col_b:
+          if st.button("🗑️ Eliminar", key=f"del_{row['ID']}_{idx}"):
+            df_articles = df_articles.drop(idx).reset_index(drop=True)
+            save_data(df_articles)
+            st.success("Noticia eliminada correctamente.")
+            st.rerun()
