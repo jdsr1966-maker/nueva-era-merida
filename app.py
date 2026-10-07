@@ -9,11 +9,11 @@ st.set_page_config(
     page_title="Nueva Era Mérida Digital", page_icon="📰", layout="wide"
 )
 
-# Ocultar la barra superior y el enlace de GitHub para los lectores
+# Ocultar herramientas de deploy/GitHub manteniendo visible el menú y la barra lateral
 st.markdown(
     """
     <style>
-    [data-testid="stHeader"] {visibility: hidden; display: none;}
+    [data-testid="stToolbar"] {display: none;}
     </style>
     """,
     unsafe_allow_html=True,
@@ -348,3 +348,4 @@ else:
             save_data(df_articles)
             st.success("Noticia eliminada correctamente.")
             st.rerun()
+                  
