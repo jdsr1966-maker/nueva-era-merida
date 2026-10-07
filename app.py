@@ -1,4 +1,6 @@
 import os
+import re
+import urllib.request
 import pandas as pd
 import streamlit as st
 
@@ -20,6 +22,50 @@ SECCIONES_OFICIALES = [
     "Deportes",
     "Política",
 ]
+
+
+def extraer_imagen_og(url):
+  """Extrae automáticamente la fotografía real directamente desde el enlace web de la noticia"""
+  if not url or not str(url).startswith("http"):
+    return ""
+  try:
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            )
+        },
+    )
+    with urllib.request.urlopen(req, timeout=6) as response:
+      html = response.read().decode("utf-8", errors="ignore")
+
+      # 1. Buscar la etiqueta oficial og:image que usan los portales y Blogger
+      match = re.search(
+          r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
+          html,
+          re.IGNORECASE,
+      )
+      if not match:
+        match = re.search(
+            r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
+            html,
+            re.IGNORECASE,
+        )
+      if match:
+        return match.group(1)
+
+      # 2. Si no está en og:image, buscar la primera imagen dentro del contenido de la noticia
+      match_img = re.search(
+          r'<img[^>]+src=["\'](https?://[^"\']+\.(?:jpg|jpeg|png|webp))["\']',
+          html,
+          re.IGNORECASE,
+      )
+      if match_img:
+        return match_img.group(1)
+  except Exception:
+    pass
+  return ""
 
 
 def load_data():
@@ -86,7 +132,7 @@ df_articles = load_data()
 # --- BARRA LATERAL ---
 st.sidebar.markdown("### 📰 Nueva Era Mérida Digital")
 
-# Carga segura del logo principal
+# Carga segura del logo principal de la barra lateral
 logo_file = "logo.jpg"
 for fname in ["logo.jpg", "logo.png", "logo.jpeg", "Logo.png", "Logo.jpg"]:
   if os.path.exists(fname):
@@ -157,13 +203,29 @@ if not modo_admin:
 
           with col_img:
             img_path = str(row["Imagen"]).strip()
-            if img_path and img_path != "nan":
+            enlace_noticia = str(row["Enlace Web"]).strip()
+
+            # Extraer automáticamente al vuelo usando el link web si no hay imagen fija
+            if (
+                not img_path
+                or img_path == "nan"
+                or img_path.startswith("uploaded_images")
+            ):
+              if enlace_noticia and enlace_noticia.startswith("http"):
+                img_path = extraer_imagen_og(enlace_noticia)
+
+            if img_path and img_path.startswith("http"):
               try:
                 st.image(img_path, use_container_width=True)
               except Exception:
-                st.info("📰 Nueva Era Mérida Digital")
+                st.info("📰 Noticia")
+            elif img_path and os.path.exists(img_path):
+              try:
+                st.image(img_path, use_container_width=True)
+              except Exception:
+                st.info("📰 Noticia")
             else:
-              st.info("📰 Nueva Era Mérida Digital")
+              st.info("📰 Nueva Era Mérida")
 
           with col_txt:
             st.markdown(f"### {row['Título']}")
@@ -175,13 +237,12 @@ if not modo_admin:
             if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
               st.write(row["Resumen"])
 
-            enlace = str(row["Enlace Web"]).strip()
-            if enlace and enlace != "nan":
-              if not enlace.startswith("http"):
-                enlace = "https://" + enlace
+            if enlace_noticia and enlace_noticia != "nan":
+              if not enlace_noticia.startswith("http"):
+                enlace_noticia = "https://" + enlace_noticia
               st.markdown(
                   f"🔗 **[Leer noticia completa en la"
-                  f" Web]({enlace})**",
+                  f" Web]({enlace_noticia})**",
                   unsafe_allow_html=True,
               )
 
@@ -207,31 +268,14 @@ else:
       )
       resumen = st.text_area("Resumen o Bajada de la Noticia")
 
-      st.markdown("---")
-      st.markdown("### 📷 Fotografía de la Noticia")
-      imagen_url_input = st.text_input(
-          "Pegar enlace directo de la imagen (URL de la foto en Blogger)"
-      )
-      imagen_subida = st.file_uploader(
-          "O sube la foto desde tu dispositivo (Opcional)",
-          type=["jpg", "jpeg", "png"],
-      )
-
       submit_btn = st.form_submit_button(label="Publicar Noticia en el Portal")
 
       if submit_btn:
         if not titulo.strip():
           st.warning("El título es obligatorio.")
         else:
-          img_path_saved = ""
-          # 1. Si subió archivo local, tiene prioridad
-          if imagen_subida is not None:
-            img_path_saved = os.path.join(IMAGES_DIR, imagen_subida.name)
-            with open(img_path_saved, "wb") as f:
-              f.write(imagen_subida.getbuffer())
-          # 2. Si pegó la URL de la imagen, usarla
-          elif imagen_url_input.strip():
-            img_path_saved = imagen_url_input.strip()
+          # Extraer automáticamente la foto desde el link web al registrar
+          img_path_saved = extraer_imagen_og(enlace_web)
 
           nuevo_id = (
               int(df_articles["ID"].max()) + 1
@@ -253,7 +297,9 @@ else:
           )
           df_articles = pd.concat([df_articles, nueva_fila], ignore_index=True)
           save_data(df_articles)
-          st.success("¡Noticia publicada con éxito con su respectiva foto!")
+          st.success(
+              "¡Noticia publicada con éxito y fotografía extraída del link!"
+          )
           st.balloons()
 
   with tab2:
