@@ -9,11 +9,19 @@ st.set_page_config(
     page_title="Nueva Era Mérida Digital", page_icon="📰", layout="centered"
 )
 
-# Ocultar herramientas de deploy/GitHub para mantener el portal limpio
+# Ocultar completamente la barra, el menú, la corona roja y el badge flotante de Streamlit
 st.markdown(
     """
     <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .stAppDeployButton {display: none;}
     [data-testid="stToolbar"] {display: none;}
+    [data-testid="stDecoration"] {display: none;}
+    [data-testid="stStatusWidget"] {display: none !important;}
+    div.viewerBadge_container__1QSob {display: none !important;}
+    #viewerBadge {display: none !important;}
     </style>
     """,
     unsafe_allow_html=True,
@@ -334,5 +342,4 @@ st.markdown(
     " www.nuevaerameridadigital.com</a><br>Depósito Legal:"
     " ME2026000169</small></div>",
     unsafe_allow_html=True,
-                )
-
+        )
