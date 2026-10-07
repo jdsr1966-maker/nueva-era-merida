@@ -9,7 +9,9 @@ st.set_page_config(
     page_title="Nueva Era Mérida Digital", page_icon="📰", layout="centered"
 )
 
-# Ocultar completamente la barra, el menú, la corona roja y el badge flotante de Streamlit
+# Ocultar modos de desarrollador, barras y la corona roja flotante de Streamlit
+st.set_option("client.toolbarMode", "minimal")
+
 st.markdown(
     """
     <style>
@@ -22,6 +24,7 @@ st.markdown(
     [data-testid="stStatusWidget"] {display: none !important;}
     div.viewerBadge_container__1QSob {display: none !important;}
     #viewerBadge {display: none !important;}
+    iframe[src*="viewerBadge"] {display: none !important;}
     </style>
     """,
     unsafe_allow_html=True,
@@ -342,4 +345,5 @@ st.markdown(
     " www.nuevaerameridadigital.com</a><br>Depósito Legal:"
     " ME2026000169</small></div>",
     unsafe_allow_html=True,
-        )
+)
+
