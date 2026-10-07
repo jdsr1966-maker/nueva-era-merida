@@ -152,7 +152,9 @@ modo_admin = False
 password_input = st.sidebar.text_input(
     "Contraseña de Administrador", type="password"
 )
-ADMIN_PASSWORD = "merida2026"
+ADMIN_PASSWORD = (
+    "merida2026"  # <-- AQUÍ PUEDES CAMBIAR TU CLAVE POR UNA MÁS SEGURA
+)
 
 if password_input == ADMIN_PASSWORD:
   st.sidebar.success("✅ Modo Redacción Activo")
