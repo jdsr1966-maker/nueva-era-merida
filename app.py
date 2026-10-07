@@ -204,25 +204,16 @@ if not modo_admin:
 
           mostrar_imagen = True
 
-          # REGLA ESTRICTA: Los artículos de Opinión NUNCA llevan foto automática
-          if seccion_actual == "Opinión" and img_path != "FOTO_PERSONALIZADA":
+          # REGLA: Los artículos de Opinión nunca llevan foto
+          if seccion_actual == "Opinión":
             mostrar_imagen = False
           elif img_path in ["SIN_IMAGEN", "nan", ""]:
             mostrar_imagen = False
-          elif (
-              not img_path
-              or img_path == "nan"
-              or img_path.startswith("uploaded_images")
-          ):
-            if seccion_actual != "Opinión" and enlace_noticia.startswith("http"):
-              img_path = extraer_imagen_og(enlace_noticia)
-              if not img_path:
-                mostrar_imagen = False
-            else:
-              mostrar_imagen = False
+          elif not img_path.startswith("http"):
+            mostrar_imagen = False
 
           # Mostrar con o sin imagen según corresponda
-          if mostrar_imagen and img_path and img_path.startswith("http"):
+          if mostrar_imagen and img_path.startswith("http"):
             col_img, col_txt = st.columns([1, 2])
             with col_img:
               try:
@@ -283,6 +274,10 @@ else:
           "Enlace Web Específico del Artículo (Blogger)",
           value="https://www.nuevaerameridadigital.com",
       )
+      imagen_manual = st.text_input(
+          "URL Directa de la Imagen (Opcional - Pega aquí el link de la foto"
+          " si deseas asegurarla)"
+      )
       resumen = st.text_area("Resumen o Bajada de la Noticia")
 
       submit_btn = st.form_submit_button(label="Publicar Noticia en el Portal")
@@ -291,9 +286,10 @@ else:
         if not titulo.strip():
           st.warning("El título es obligatorio.")
         else:
-          # Si la sección es Opinión, no se extrae foto. Para las demás, se extrae del enlace.
           if seccion == "Opinión":
             img_path_saved = "SIN_IMAGEN"
+          elif imagen_manual.strip().startswith("http"):
+            img_path_saved = imagen_manual.strip()
           else:
             img_path_saved = extraer_imagen_og(enlace_web)
             if not img_path_saved:
