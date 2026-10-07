@@ -185,26 +185,24 @@ elif password_input != "":
 st.markdown("---")
 
 if not modo_admin:
-  # --- VISTA PÚBLICA (LECTORES) ---
-  st.subheader("Últimas Publicaciones")
+  # --- VISTA PÚBLICA (LECTORES CON NAVEGACIÓN POR SECCIONES) ---
+  opciones_navegacion = ["🏠 Portada (Últimas 10 Noticias)"] + [
+      f"📁 {sec}" for sec in SECCIONES_OFICIALES
+  ]
+  seleccion_nav = st.selectbox(
+      "📂 Explorar Portal por Secciones o Portada", opciones_navegacion
+  )
 
-  if df_articles.empty:
-    st.info("No hay publicaciones disponibles en este momento.")
-  else:
-    secciones_disponibles = ["Todas"] + SECCIONES_OFICIALES
-    seccion_filtro = st.selectbox(
-        "Filtrar por Sección Informativa", secciones_disponibles
-    )
+  st.markdown("---")
 
-    if seccion_filtro != "Todas":
-      df_filtered = df_articles[df_articles["Sección"] == seccion_filtro]
+  if seleccion_nav.startswith("🏠"):
+    st.subheader("📰 Últimas Publicaciones (Portada)")
+    if df_articles.empty:
+      st.info("No hay publicaciones disponibles en este momento.")
     else:
-      df_filtered = df_articles
-
-    if df_filtered.empty:
-      st.info(f"No hay notas en la sección '{seccion_filtro}' todavía.")
-    else:
-      for index, row in df_filtered.iloc[::-1].iterrows():
+      # Mostrar únicamente las últimas 10 noticias
+      df_ultimas = df_articles.iloc[::-1].head(10)
+      for index, row in df_ultimas.iterrows():
         with st.container():
           seccion_actual = str(row["Sección"]).strip()
           enlace_noticia = str(row["Enlace Web"]).strip()
@@ -246,6 +244,68 @@ if not modo_admin:
             st.caption(
                 f"📁 **Sección:** {row['Sección']} | ✍️ **Autor:**"
                 f" {row['Autor']} | 📅 **Fecha:** {row['Fecha']}"
+            )
+            if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
+              st.write(row["Resumen"])
+            if enlace_noticia and enlace_noticia != "nan":
+              if not enlace_noticia.startswith("http"):
+                enlace_noticia = "https://" + enlace_noticia
+              st.markdown(
+                  f"🔗 **[Leer noticia completa en la"
+                  f" Web]({enlace_noticia})**",
+                  unsafe_allow_html=True,
+              )
+
+          st.markdown("---")
+  else:
+    # Vista filtrada por una sección específica
+    seccion_elegida = seleccion_nav.replace("📁 ", "")
+    st.subheader(f"📂 Sección: {seccion_elegida}")
+
+    df_seccion = df_articles[df_articles["Sección"] == seccion_elegida]
+
+    if df_seccion.empty:
+      st.info(f"No hay notas en la sección '{seccion_elegida}' todavía.")
+    else:
+      for index, row in df_seccion.iloc[::-1].iterrows():
+        with st.container():
+          enlace_noticia = str(row["Enlace Web"]).strip()
+          img_path = str(row["Imagen"]).strip()
+
+          if seccion_elegida == "Opinión":
+            st.markdown(f"### {row['Título']}")
+            st.caption(
+                f"✍️ **Autor:** {row['Autor']} | 📅 **Fecha:** {row['Fecha']}"
+            )
+            if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
+              st.write(row["Resumen"])
+            if enlace_noticia and enlace_noticia != "nan":
+              if not enlace_noticia.startswith("http"):
+                enlace_noticia = "https://" + enlace_noticia
+              st.markdown(
+                  f"🔗 **[Leer noticia completa en la"
+                  f" Web]({enlace_noticia})**",
+                  unsafe_allow_html=True,
+              )
+          else:
+            if (
+                not img_path
+                or img_path == "nan"
+                or img_path == "SIN_IMAGEN"
+                or img_path.startswith("uploaded_images")
+            ):
+              if enlace_noticia and enlace_noticia.startswith("http"):
+                img_path = extraer_imagen_og(enlace_noticia)
+
+            if img_path and img_path.startswith("http"):
+              try:
+                st.image(img_path, use_container_width=True)
+              except Exception:
+                st.info("📰 Noticia")
+
+            st.markdown(f"### {row['Título']}")
+            st.caption(
+                f"✍️ **Autor:** {row['Autor']} | 📅 **Fecha:** {row['Fecha']}"
             )
             if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
               st.write(row["Resumen"])
@@ -345,5 +405,4 @@ st.markdown(
     " www.nuevaerameridadigital.com</a><br>Depósito Legal:"
     " ME2026000169</small></div>",
     unsafe_allow_html=True,
-)
-
+                )
