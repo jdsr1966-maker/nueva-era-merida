@@ -1,4 +1,6 @@
 import os
+import re
+import urllib.request
 import pandas as pd
 import streamlit as st
 
@@ -20,6 +22,27 @@ SECCIONES_OFICIALES = [
     "Deportes",
     "Política",
 ]
+
+
+def extraer_imagen_og(url):
+  """Extrae automáticamente la imagen principal (og:image) desde el enlace de la noticia"""
+  if not url or not str(url).startswith("http"):
+    return ""
+  try:
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=5) as response:
+      html = response.read().decode("utf-8", errors="ignore")
+      # Buscar etiqueta og:image en el HTML de Blogger / Web
+      match = re.search(
+          r'<meta[^>]*property=["\']og:image["\'][^>]*content=["\']([^"\']+)["\']',
+          html,
+          re.IGNORECASE,
+      )
+      if match:
+        return match.group(1)
+  except Exception:
+    pass
+  return ""
 
 
 def load_data():
@@ -107,9 +130,7 @@ modo_admin = False
 password_input = st.sidebar.text_input(
     "Contraseña de Administrador", type="password"
 )
-ADMIN_PASSWORD = (
-    "merida2026"  # Puedes cambiar esta contraseña cuando gustes
-)
+ADMIN_PASSWORD = "merida2026"
 
 if password_input == ADMIN_PASSWORD:
   st.sidebar.success("✅ Modo Redacción Activo")
@@ -158,14 +179,29 @@ if not modo_admin:
           col_img, col_txt = st.columns([1, 2])
 
           with col_img:
-            img_path = str(row["Imagen"])
-            if img_path and os.path.exists(img_path):
-              st.image(img_path, use_container_width=True)
+            img_path = str(row["Imagen"]).strip()
+            if img_path and img_path != "nan":
+              # Puede ser una URL web o un archivo local
+              try:
+                st.image(img_path, use_container_width=True)
+              except Exception:
+                if os.path.exists(logo_file):
+                  st.image(logo_file, use_container_width=True)
             else:
-              if os.path.exists(logo_file):
-                st.image(logo_file, use_container_width=True)
+              # Si no tiene imagen guardada, intentar extraerla al vuelo del enlace web
+              enlace_temp = str(row["Enlace Web"]).strip()
+              img_url_auto = extraer_imagen_og(enlace_temp)
+              if img_url_auto:
+                try:
+                  st.image(img_url_auto, use_container_width=True)
+                except Exception:
+                  if os.path.exists(logo_file):
+                    st.image(logo_file, use_container_width=True)
               else:
-                st.info("Nueva Era Mérida")
+                if os.path.exists(logo_file):
+                  st.image(logo_file, use_container_width=True)
+                else:
+                  st.info("Nueva Era Mérida")
 
           with col_txt:
             st.markdown(f"### {row['Título']}")
@@ -210,7 +246,11 @@ else:
       resumen = st.text_area("Resumen o Bajada de la Noticia")
 
       imagen_subida = st.file_uploader(
-          "Fotografía Destacada de la Noticia", type=["jpg", "jpeg", "png"]
+          (
+              "Fotografía Opcional (Si no subes ninguna, la app tomará la foto"
+              " automáticamente del enlace web)"
+          ),
+          type=["jpg", "jpeg", "png"],
       )
 
       submit_btn = st.form_submit_button(label="Publicar Noticia en el Portal")
@@ -220,10 +260,14 @@ else:
           st.warning("El título es obligatorio.")
         else:
           img_path_saved = ""
+          # 1. Si subió archivo manual, guardarlo
           if imagen_subida is not None:
             img_path_saved = os.path.join(IMAGES_DIR, imagen_subida.name)
             with open(img_path_saved, "wb") as f:
               f.write(imagen_subida.getbuffer())
+          else:
+            # 2. Si no subió archivo, intentar extraer la imagen automáticamente del enlace web
+            img_path_saved = extraer_imagen_og(enlace_web)
 
           nuevo_id = (
               int(df_articles["ID"].max()) + 1
@@ -245,7 +289,10 @@ else:
           )
           df_articles = pd.concat([df_articles, nueva_fila], ignore_index=True)
           save_data(df_articles)
-          st.success("¡Noticia publicada con éxito en el portal!")
+          st.success(
+              "¡Noticia publicada con éxito y fotografía vinculada desde el"
+              " enlace!"
+          )
           st.balloons()
 
   with tab2:
