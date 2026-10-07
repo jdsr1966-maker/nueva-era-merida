@@ -136,6 +136,19 @@ def save_data(df):
 
 df_articles = load_data()
 
+# --- MOSTRAR LOGOTIPO OFICIAL EN LA PARTE SUPERIOR ---
+logo_file = "logo.jpg"
+for fname in ["logo.jpg", "logo.png", "logo.jpeg", "Logo.png", "Logo.jpg"]:
+  if os.path.exists(fname):
+    logo_file = fname
+    break
+
+if os.path.exists(logo_file):
+  try:
+    st.image(logo_file, use_container_width=True)
+  except Exception:
+    pass
+
 # --- CABECERA Y ACCESO DE REDACCIÓN DIRECTO PARA MÓVIL ---
 st.title("📰 Nueva Era Mérida Digital")
 st.markdown(
@@ -150,7 +163,7 @@ with st.expander("🔐 Acceso de Redacción (Administrador)", expanded=False):
   )
 
 modo_admin = False
-ADMIN_PASSWORD = "Geor.0307"
+ADMIN_PASSWORD = "merida2026"
 
 if password_input == ADMIN_PASSWORD:
   st.success("✅ Modo Redacción Activo")
