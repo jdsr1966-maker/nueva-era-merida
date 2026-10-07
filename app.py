@@ -174,7 +174,7 @@ with st.expander("🔐 Acceso de Redacción (Administrador)", expanded=False):
   )
 
 modo_admin = False
-ADMIN_PASSWORD = "merida2026"
+ADMIN_PASSWORD = "Geor.0307"
 
 if password_input == ADMIN_PASSWORD:
   st.success("✅ Modo Redacción Activo")
