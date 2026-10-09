@@ -43,7 +43,7 @@ def obtener_noticias():
     return []
 
 
-# Control de Acceso (Entrar y Salir del panel de redacción)
+# Panel lateral (En celulares se abre tocando la flechita > arriba a la izquierda)
 st.sidebar.title("Panel de Control")
 modo_admin = st.sidebar.toggle("🔐 Entrar al Modo Redacción")
 
@@ -98,10 +98,7 @@ if modo_admin:
       else:
         st.sidebar.warning("Por favor complete al menos el título y el resumen.")
 
-  if st.sidebar.button("🚪 Salir de Redacción"):
-    st.rerun()
-
-# Sección principal: Visualizar noticias publicadas en una sola pestaña
+# Sección principal: Visualizar noticias publicadas
 st.markdown("### 📋 Últimas Publicaciones")
 
 noticias = obtener_noticias()
@@ -117,10 +114,22 @@ if noticias and isinstance(noticias, list):
         pass
 
     st.markdown(f"## {noticia.get('Título', 'Sin título')}")
+
+    # Limpiar formato de autor para evitar asteriscos dobles
+    autor_limpio = (
+        str(noticia.get("Autor", "Equipo"))
+        .replace("*", "")
+        .replace("  ", " ")
+        .strip()
+    )
+    seccion_limpia = (
+        str(noticia.get("Sección", "General")).replace("*", "").strip()
+    )
+    fecha_limpia = str(noticia.get("Fecha", "")).split("T")[0]
+
     st.caption(
-        f"Sección: **{noticia.get('Sección', 'General')}** | Autor:"
-        f" **{noticia.get('Autor', 'Equipo')}** | Fecha:"
-        f" {noticia.get('Fecha', '')}"
+        f"Sección: **{seccion_limpia}** | Autor: **{autor_limpio}** | Fecha:"
+        f" {fecha_limpia}"
     )
 
     if noticia.get("Resumen"):
