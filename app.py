@@ -118,13 +118,14 @@ with st.expander("🔒 Acceso Administrador (Publicar / Borrar)", expanded=False
                 f"[{n.get('Sección', 'General')}] {n.get('Título', 'Sin título')}"
             )
           with c2:
-            row_index_sheet = i + 2  # Fila exacta en Google Sheets
-            if st.button("🗑️ Borrar", key=f"del_row_{row_index_sheet}"):
+            row_index_sheet = i + 2
+            titulo_nota = n.get("Título", "")
+            if st.button("🗑️ Borrar", key=f"del_{i}_{row_index_sheet}"):
               try:
                 payload_del = {
                     "action": "delete",
                     "rowIndex": row_index_sheet,
-                    "ID": str(n.get("ID", "")),
+                    "titulo": titulo_nota,
                 }
                 requests.post(API_URL, json=payload_del)
                 st.success("Noticia eliminada. Recargue la página.")
