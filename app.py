@@ -1,428 +1,52 @@
-import os
-import re
-import urllib.request
-import pandas as pd
+import requests
 import streamlit as st
 
-# Configuración de página optimizada para móvil
+# Configuración de la página de Streamlit
 st.set_page_config(
-    page_title="Nueva Era Mérida Digital", page_icon="📰", layout="centered"
+    page_title="Nueva Era Mérida Digital", page_icon="📰", layout="wide"
 )
 
-# Ocultar modos de desarrollador, barras y la corona roja flotante de Streamlit
-st.set_option("client.toolbarMode", "minimal")
+# URL de la API de Google Sheets
+API_URL = "https://script.google.com/macros/s/AKfycbzlRR2RRkKdzC19WqVulEEB-0gyqu5XbwWRp-96K-JGAVhbeGAjFON1sVVzG8pUzWhV/exec"
 
-st.markdown(
-    """
-    <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    .stAppDeployButton {display: none;}
-    [data-testid="stToolbar"] {display: none;}
-    [data-testid="stDecoration"] {display: none;}
-    [data-testid="stStatusWidget"] {display: none !important;}
-    div.viewerBadge_container__1QSob {display: none !important;}
-    #viewerBadge {display: none !important;}
-    iframe[src*="viewerBadge"] {display: none !important;}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-DATA_FILE = "articles.csv"
-IMAGES_DIR = "uploaded_images"
-os.makedirs(IMAGES_DIR, exist_ok=True)
-
-SECCIONES_OFICIALES = [
-    "Opinión",
-    "Comunidades",
-    "Institucional",
-    "Cultura",
-    "Memoria Viva",
-    "Deportes",
-    "Política",
-]
-
-
-def extraer_imagen_og(url):
-  """Extrae automáticamente la fotografía real directamente desde el enlace web de la noticia"""
-  if not url or not str(url).startswith("http"):
-    return ""
-  try:
-    req = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            )
-        },
-    )
-    with urllib.request.urlopen(req, timeout=6) as response:
-      html = response.read().decode("utf-8", errors="ignore")
-
-      match = re.search(
-          r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
-          html,
-          re.IGNORECASE,
-      )
-      if not match:
-        match = re.search(
-            r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
-            html,
-            re.IGNORECASE,
-        )
-      if match:
-        return match.group(1)
-
-      match_img = re.search(
-          r'<img[^>]+src=["\'](https?://[^"\']+\.(?:jpg|jpeg|png|webp))["\']',
-          html,
-          re.IGNORECASE,
-      )
-      if match_img:
-        return match_img.group(1)
-  except Exception:
-    pass
-  return ""
-
-
-def load_data():
-  if os.path.exists(DATA_FILE):
-    try:
-      df = pd.read_csv(DATA_FILE)
-      expected_cols = [
-          "ID",
-          "Fecha",
-          "Título",
-          "Sección",
-          "Autor",
-          "Enlace Web",
-          "Resumen",
-          "Imagen",
-      ]
-      for col in expected_cols:
-        if col not in df.columns:
-          df[col] = ""
-      return df
-    except Exception:
-      pass
-
-  # Iniciar completamente limpio (sin noticias falsas o de relleno)
-  df = pd.DataFrame(
-      columns=[
-          "ID",
-          "Fecha",
-          "Título",
-          "Sección",
-          "Autor",
-          "Enlace Web",
-          "Resumen",
-          "Imagen",
-      ]
-  )
-  df.to_csv(DATA_FILE, index=False)
-  return df
-
-
-def save_data(df):
-  df.to_csv(DATA_FILE, index=False)
-
-
-df_articles = load_data()
-
-# --- MOSTRAR LOGOTIPO OFICIAL EN LA PARTE SUPERIOR ---
-logo_file = "logo.jpg"
-for fname in ["logo.jpg", "logo.png", "logo.jpeg", "Logo.png", "Logo.jpg"]:
-  if os.path.exists(fname):
-    logo_file = fname
-    break
-
-if os.path.exists(logo_file):
-  try:
-    st.image(logo_file, use_container_width=True)
-  except Exception:
-    pass
-
-# --- CABECERA Y ACCESO DE REDACCIÓN DIRECTO PARA MÓVIL ---
 st.title("📰 Nueva Era Mérida Digital")
-st.markdown(
-    "*Portal Informativo y Archivo Oficial — Mérida, Venezuela*"
+st.write(
+    "Sistema de gestión y visualización de noticias en la nube conectado a"
+    " Google Sheets."
 )
 st.markdown("---")
 
-# Control de sesión para el acceso de administración seguro
-if "admin_logged_in" not in st.session_state:
-  st.session_state.admin_logged_in = False
 
-if not st.session_state.admin_logged_in:
-  with st.expander("🔐 Acceso de Redacción (Administrador)", expanded=False):
-    password_input = st.text_input(
-        "Ingrese Contraseña de Administrador", type="password"
-    )
-    if password_input == "merida2026":
-      st.session_state.admin_logged_in = True
-      st.success("✅ Acceso concedido")
-      st.rerun()
-    elif password_input != "":
-      st.error("Contraseña incorrecta")
+# Función para consultar las noticias desde Google Sheets
+def obtener_noticias():
+  try:
+    response = requests.get(API_URL)
+    return response.json()
+  except Exception as e:
+    st.error(f"Error al conectar con la base de datos: {e}")
+    return []
 
-st.markdown("---")
 
-if not st.session_state.admin_logged_in:
-  # --- VISTA PÚBLICA (LECTORES CON NAVEGACIÓN POR SECCIONES) ---
-  opciones_navegacion = ["🏠 Portada (Últimas 10 Noticias)"] + [
-      f"📁 {sec}" for sec in SECCIONES_OFICIALES
-  ]
-  seleccion_nav = st.selectbox(
-      "📂 Explorar Portal por Secciones o Portada", opciones_navegacion
-  )
+# Sección principal: Visualizar noticias
+st.subheader("📋 Últimas Publicaciones")
 
-  st.markdown("---")
+noticias = obtener_noticias()
 
-  if seleccion_nav.startswith("🏠"):
-    st.subheader("📰 Últimas Publicaciones (Portada)")
-    if df_articles.empty:
-      st.info(
-          "No hay publicaciones disponibles en este momento. El portal está"
-          " listo para recibir notas."
-      )
-    else:
-      df_ultimas = df_articles.iloc[::-1].head(10)
-      for index, row in df_ultimas.iterrows():
-        with st.container():
-          seccion_actual = str(row["Sección"]).strip()
-          enlace_noticia = str(row["Enlace Web"]).strip()
-          img_path = str(row["Imagen"]).strip()
-
-          if seccion_actual == "Opinión":
-            st.markdown(f"### {row['Título']}")
-            st.caption(
-                f"📁 **Sección:** {row['Sección']} | ✍️ **Autor:**"
-                f" {row['Autor']} | 📅 **Fecha:** {row['Fecha']}"
-            )
-            if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
-              st.write(row["Resumen"])
-            if enlace_noticia and enlace_noticia != "nan":
-              if not enlace_noticia.startswith("http"):
-                enlace_noticia = "https://" + enlace_noticia
-              st.markdown(
-                  f"🔗 **[Leer noticia completa en la"
-                  f" Web]({enlace_noticia})**",
-                  unsafe_allow_html=True,
-              )
-          else:
-            if (
-                not img_path
-                or img_path == "nan"
-                or img_path == "SIN_IMAGEN"
-                or img_path.startswith("uploaded_images")
-            ):
-              if enlace_noticia and enlace_noticia.startswith("http"):
-                img_path = extraer_imagen_og(enlace_noticia)
-
-            if img_path and img_path.startswith("http"):
-              try:
-                st.image(img_path, use_container_width=True)
-              except Exception:
-                st.info("📰 Noticia")
-
-            st.markdown(f"### {row['Título']}")
-            st.caption(
-                f"📁 **Sección:** {row['Sección']} | ✍️ **Autor:**"
-                f" {row['Autor']} | 📅 **Fecha:** {row['Fecha']}"
-            )
-            if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
-              st.write(row["Resumen"])
-            if enlace_noticia and enlace_noticia != "nan":
-              if not enlace_noticia.startswith("http"):
-                enlace_noticia = "https://" + enlace_noticia
-              st.markdown(
-                  f"🔗 **[Leer noticia completa en la"
-                  f" Web]({enlace_noticia})**",
-                  unsafe_allow_html=True,
-              )
-
-          st.markdown("---")
-  else:
-    seccion_elegida = seleccion_nav.replace("📁 ", "")
-    st.subheader(f"📂 Sección: {seccion_elegida}")
-
-    df_seccion = df_articles[df_articles["Sección"] == seccion_elegida]
-
-    if df_seccion.empty:
-      st.info(f"No hay notas en la sección '{seccion_elegida}' todavía.")
-    else:
-      for index, row in df_seccion.iloc[::-1].iterrows():
-        with st.container():
-          enlace_noticia = str(row["Enlace Web"]).strip()
-          img_path = str(row["Imagen"]).strip()
-
-          if seccion_elegida == "Opinión":
-            st.markdown(f"### {row['Título']}")
-            st.caption(
-                f"✍️ **Autor:** {row['Autor']} | 📅 **Fecha:** {row['Fecha']}"
-            )
-            if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
-              st.write(row["Resumen"])
-            if enlace_noticia and enlace_noticia != "nan":
-              if not enlace_noticia.startswith("http"):
-                enlace_noticia = "https://" + enlace_noticia
-              st.markdown(
-                  f"🔗 **[Leer noticia completa en la"
-                  f" Web]({enlace_noticia})**",
-                  unsafe_allow_html=True,
-              )
-          else:
-            if (
-                not img_path
-                or img_path == "nan"
-                or img_path == "SIN_IMAGEN"
-                or img_path.startswith("uploaded_images")
-            ):
-              if enlace_noticia and enlace_noticia.startswith("http"):
-                img_path = extraer_imagen_og(enlace_noticia)
-
-            if img_path and img_path.startswith("http"):
-              try:
-                st.image(img_path, use_container_width=True)
-              except Exception:
-                st.info("📰 Noticia")
-
-            st.markdown(f"### {row['Título']}")
-            st.caption(
-                f"✍️ **Autor:** {row['Autor']} | 📅 **Fecha:** {row['Fecha']}"
-            )
-            if pd.notna(row["Resumen"]) and str(row["Resumen"]).strip() != "":
-              st.write(row["Resumen"])
-            if enlace_noticia and enlace_noticia != "nan":
-              if not enlace_noticia.startswith("http"):
-                enlace_noticia = "https://" + enlace_noticia
-              st.markdown(
-                  f"🔗 **[Leer noticia completa en la"
-                  f" Web]({enlace_noticia})**",
-                  unsafe_allow_html=True,
-              )
-
-          st.markdown("---")
-
-else:
-  # --- VISTA DE ADMINISTRACIÓN (REDACCIÓN Y GESTIÓN) ---
-  st.subheader("🛠️ Panel de Control y Gestión Editorial")
-
-  col_a1, col_a2 = st.columns([2, 2])
-  with col_a1:
-    st.success("✅ Modo Redacción Activo")
-  with col_a2:
-    if st.button("🏠 Volver a la Portada", key="btn_volver_arriba"):
-      st.session_state.admin_logged_in = False
-      st.rerun()
-
-  st.markdown("---")
-
-  tab1, tab2, tab3 = st.tabs([
-      "✍️ Registrar Nueva Noticia",
-      "🗑️ Gestionar y Eliminar",
-      "💾 Respaldar Base de Datos",
-  ])
-
-  with tab1:
-    with st.form("form_nueva_nota_admin", clear_on_submit=True):
-      titulo = st.text_input("Título de la Noticia")
-      seccion = st.selectbox("Sección", SECCIONES_OFICIALES)
-      autor = st.text_input("Autor / Redactor", value="Jorge Sandoval")
-      fecha = st.date_input("Fecha de Publicación")
-      enlace_web = st.text_input(
-          "Enlace Web Específico del Artículo (Blogger)",
-          value="https://www.nuevaerameridadigital.com",
-      )
-      resumen = st.text_area("Resumen o Bajada de la Noticia")
-
-      submit_btn = st.form_submit_button(label="Publicar Noticia en el Portal")
-
-      if submit_btn:
-        if not titulo.strip():
-          st.warning("El título es obligatorio.")
-        else:
-          if seccion == "Opinión":
-            img_path_saved = "SIN_IMAGEN"
-          else:
-            img_path_saved = extraer_imagen_og(enlace_web)
-            if not img_path_saved:
-              img_path_saved = ""
-
-          try:
-            if not df_articles.empty and "ID" in df_articles.columns:
-              valid_ids = pd.to_numeric(df_articles["ID"], errors="coerce")
-              nuevo_id = (
-                  int(valid_ids.max()) + 1 if not valid_ids.isna().all() else 1
-              )
-            else:
-              nuevo_id = 1
-          except Exception:
-            nuevo_id = len(df_articles) + 1
-
-          nueva_fila = pd.DataFrame(
-              [{
-                  "ID": nuevo_id,
-                  "Fecha": str(fecha),
-                  "Título": titulo,
-                  "Sección": seccion,
-                  "Autor": autor,
-                  "Enlace Web": enlace_web,
-                  "Resumen": resumen,
-                  "Imagen": img_path_saved,
-              }]
-          )
-          df_articles = pd.concat([df_articles, nueva_fila], ignore_index=True)
-          save_data(df_articles)
-          st.success("¡Noticia publicada con éxito en el portal!")
-          st.balloons()
-
-    st.markdown("---")
-    if st.button(
-        "🏠 ¿Terminó de publicar? Volver a la Portada del Periódico",
-        key="btn_volver_abajo",
-    ):
-      st.session_state.admin_logged_in = False
-      st.rerun()
-
-  with tab2:
-    st.markdown("### Eliminar Publicaciones o Artículos")
-    if df_articles.empty:
-      st.info("No hay notas registradas para administrar.")
-    else:
-      for idx, row in df_articles.iterrows():
-        col_a, col_b = st.columns([4, 1])
-        with col_a:
-          st.markdown(
-              f"**[{row['Sección']}] {row['Título']}** ({row['Fecha']})"
-          )
-        with col_b:
-          if st.button("🗑️ Eliminar", key=f"del_{row['ID']}_{idx}"):
-            df_articles = df_articles.drop(idx).reset_index(drop=True)
-            save_data(df_articles)
-            st.success("Noticia eliminada correctamente.")
-            st.rerun()
-
-  with tab3:
-    st.markdown("### 💾 Copia de Respaldo de Artículos")
+if noticias:
+  for noticia in noticias:
+    st.markdown(f"### {noticia.get('Título', 'Sin título')}")
     st.write(
-        "Descargue periódicamente su archivo `articles.csv` actualizado para"
-        " mantener un respaldo seguro de todas sus publicaciones."
+        f"**Sección:** {noticia.get('Sección', 'General')} | **Autor:**"
+        f" {noticia.get('Autor', 'Equipo')} | **Fecha:**"
+        f" {noticia.get('Fecha', '')}"
     )
-    csv_data = df_articles.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        label="📥 Descargar Base de Datos (articles.csv)",
-        data=csv_data,
-        file_name="articles.csv",
-        mime="text/csv",
-    )
-
-st.markdown(
-    "<div style='text-align: center; color: gray;'><small>Portal Web Oficial"
-    " (Blogger): <a href='https://www.nuevaerameridadigital.com'>Visitar"
-    " www.nuevaerameridadigital.com</a><br>Depósito Legal:"
-    " ME2026000169</small></div>",
-    unsafe_allow_html=True,
-              )
+    st.write(noticia.get("Resumen", ""))
+    if noticia.get("Enlace Web"):
+      st.markdown(f"[Leer artículo completo]({noticia.get('Enlace Web')})")
+    st.markdown("---")
+else:
+  st.info(
+      "Aún no hay noticias registradas en la hoja de cálculo o estamos"
+      " esperando el primer registro."
+  )
+    
