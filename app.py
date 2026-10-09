@@ -167,24 +167,25 @@ st.markdown(
 )
 st.markdown("---")
 
-# Sistema de Acceso de Redacción Directo en Pantalla
-with st.expander("🔐 Acceso de Redacción (Administrador)", expanded=False):
-  password_input = st.text_input(
-      "Ingrese Contraseña de Administrador", type="password"
-  )
+# Control de sesión para el acceso de administración
+if "admin_logged_in" not in st.session_state:
+  st.session_state.admin_logged_in = False
 
-modo_admin = False
-ADMIN_PASSWORD = "Geor.0307"
-
-if password_input == ADMIN_PASSWORD:
-  st.success("✅ Modo Redacción Activo")
-  modo_admin = True
-elif password_input != "":
-  st.error("Contraseña incorrecta")
+if not st.session_state.admin_logged_in:
+  with st.expander("🔐 Acceso de Redacción (Administrador)", expanded=False):
+    password_input = st.text_input(
+        "Ingrese Contraseña de Administrador", type="password"
+    )
+    if password_input == "merida2026":
+      st.session_state.admin_logged_in = True
+      st.success("✅ Acceso concedido")
+      st.rerun()
+    elif password_input != "":
+      st.error("Contraseña incorrecta")
 
 st.markdown("---")
 
-if not modo_admin:
+if not st.session_state.admin_logged_in:
   # --- VISTA PÚBLICA (LECTORES CON NAVEGACIÓN POR SECCIONES) ---
   opciones_navegacion = ["🏠 Portada (Últimas 10 Noticias)"] + [
       f"📁 {sec}" for sec in SECCIONES_OFICIALES
@@ -200,7 +201,6 @@ if not modo_admin:
     if df_articles.empty:
       st.info("No hay publicaciones disponibles en este momento.")
     else:
-      # Mostrar únicamente las últimas 10 noticias
       df_ultimas = df_articles.iloc[::-1].head(10)
       for index, row in df_ultimas.iterrows():
         with st.container():
@@ -258,7 +258,6 @@ if not modo_admin:
 
           st.markdown("---")
   else:
-    # Vista filtrada por una sección específica
     seccion_elegida = seleccion_nav.replace("📁 ", "")
     st.subheader(f"📂 Sección: {seccion_elegida}")
 
@@ -324,9 +323,22 @@ else:
   # --- VISTA DE ADMINISTRACIÓN (REDACCIÓN Y ELIMINACIÓN) ---
   st.subheader("🛠️ Panel de Control y Gestión Editorial")
 
-  tab1, tab2 = st.tabs(
-      ["✍️ Registrar Nueva Noticia", "🗑️ Gestionar y Eliminar Noticias"]
-  )
+  # Botón rápido para volver a la portada desde el panel de admin
+  col_a1, col_a2 = st.columns([2, 2])
+  with col_a1:
+    st.success("✅ Modo Redacción Activo")
+  with col_a2:
+    if st.button("🏠 Volver a la Portada", key="btn_volver_arriba"):
+      st.session_state.admin_logged_in = False
+      st.rerun()
+
+  st.markdown("---")
+
+  tab1, tab2, tab3 = st.tabs([
+      "✍️ Registrar Nueva Noticia",
+      "🗑️ Gestionar y Eliminar",
+      "💾 Respaldar Base de Datos",
+  ])
 
   with tab1:
     with st.form("form_nueva_nota_admin", clear_on_submit=True):
@@ -381,6 +393,15 @@ else:
           st.success("¡Noticia publicada con éxito en el portal!")
           st.balloons()
 
+    st.markdown("---")
+    # Botón directo para regresar a la portada al terminar de publicar
+    if st.button(
+        "🏠 ¿Terminó de publicar? Volver a la Portada del Periódico",
+        key="btn_volver_abajo",
+    ):
+      st.session_state.admin_logged_in = False
+      st.rerun()
+
   with tab2:
     st.markdown("### Eliminar Publicaciones o Artículos")
     if df_articles.empty:
@@ -399,10 +420,24 @@ else:
             st.success("Noticia eliminada correctamente.")
             st.rerun()
 
+  with tab3:
+    st.markdown("### 💾 Copia de Respaldo de Artículos")
+    st.write(
+        "Descargue periódicamente su archivo `articles.csv` actualizado para"
+        " mantener un respaldo seguro de todas sus publicaciones."
+    )
+    csv_data = df_articles.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="📥 Descargar Base de Datos (articles.csv)",
+        data=csv_data,
+        file_name="articles.csv",
+        mime="text/csv",
+    )
+
 st.markdown(
     "<div style='text-align: center; color: gray;'><small>Portal Web Oficial"
     " (Blogger): <a href='https://www.nuevaerameridadigital.com'>Visitar"
     " www.nuevaerameridadigital.com</a><br>Depósito Legal:"
     " ME2026000169</small></div>",
     unsafe_allow_html=True,
-                )
+    )
