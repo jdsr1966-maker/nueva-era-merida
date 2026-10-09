@@ -43,14 +43,14 @@ def obtener_noticias():
     return []
 
 
-# Panel lateral (En celulares se abre tocando la flechita > arriba a la izquierda)
-st.sidebar.title("Panel de Control")
-modo_admin = st.sidebar.toggle("🔐 Entrar al Modo Redacción")
+# --- PANEL DE REDACCIÓN DIRECTO EN LA PÁGINA PRINCIPAL ---
+st.markdown("### ⚙️ Panel de Redacción")
+modo_admin = st.toggle("🔐 Entrar al Modo Redacción para Publicar")
 
 if modo_admin:
-  st.sidebar.markdown("---")
-  st.sidebar.subheader("✍️ Publicar Nueva Noticia")
-  with st.sidebar.form("form_publicar"):
+  st.markdown("---")
+  st.subheader("✍️ Publicar Nueva Noticia")
+  with st.form("form_publicar"):
     titulo = st.text_input("Título de la Noticia")
     seccion = st.selectbox(
         "Sección",
@@ -90,13 +90,15 @@ if modo_admin:
         }
         try:
           requests.post(API_URL, json=payload)
-          st.sidebar.success(
+          st.success(
               "¡Noticia publicada con éxito! Recargue la página en unos segundos."
           )
         except Exception as ex:
-          st.sidebar.error(f"Error al publicar: {ex}")
+          st.error(f"Error al publicar: {ex}")
       else:
-        st.sidebar.warning("Por favor complete al menos el título y el resumen.")
+        st.warning("Por favor complete al menos el título y el resumen.")
+
+st.markdown("---")
 
 # Sección principal: Visualizar noticias publicadas
 st.markdown("### 📋 Últimas Publicaciones")
@@ -115,7 +117,7 @@ if noticias and isinstance(noticias, list):
 
     st.markdown(f"## {noticia.get('Título', 'Sin título')}")
 
-    # Limpiar formato de autor para evitar asteriscos dobles
+    # Limpiar formato de autor y sección
     autor_limpio = (
         str(noticia.get("Autor", "Equipo"))
         .replace("*", "")
@@ -141,7 +143,7 @@ if noticias and isinstance(noticias, list):
     st.markdown("---")
 else:
   st.info(
-      "Aún no hay noticias registradas. Active el modo redacción en la barra"
-      " lateral para publicar su primera nota."
-      )
+      "Aún no hay noticias registradas. Active el interruptor de redacción"
+      " arriba para publicar su primera nota."
+  )
     
