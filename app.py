@@ -64,7 +64,7 @@ with st.expander("🔒 Acceso Administrador (Publicar / Borrar)", expanded=False
       "Ingrese contraseña de administrador", type="password"
   )
 
-  if password == "Geor.0307":
+  if password == "1234":
     st.success("Acceso concedido. Panel de Redacción activo.")
     tab_pub, tab_ges = st.tabs(["Publicar Noticia", "Gestionar / Borrar"])
 
@@ -73,16 +73,23 @@ with st.expander("🔒 Acceso Administrador (Publicar / Borrar)", expanded=False
         titulo = st.text_input("Título de la Noticia")
         seccion = st.selectbox("Sección", SECCIONES[1:])
         autor = st.text_input("Autor / Redacción", value="Redacción")
-        fecha = st.date_input(
-            "Fecha", value=datetime.date.today()
-        ).strftime("%Y-%m-%d")
-        resumen = st.text_area("Contenido o bajada de la noticia")
+        fecha = st.text_input(
+            "Fecha (Formato: AAAA-MM-DD)",
+            value=datetime.date.today().strftime("%Y-%m-%d"),
+            help=(
+                "Puede escribir o modificar la fecha libremente (ej:"
+                " 2026-09-18 para el mes pasado)."
+            ),
+        )
         enlace = st.text_input("Enlace Web (opcional)")
+        imagen = st.text_input(
+            "URL de la Imagen (enlace directo de la foto principal)"
+        )
 
         btn_publicar = st.form_submit_button("Publicar Noticia")
 
         if btn_publicar:
-          if titulo and resumen:
+          if titulo:
             payload = {
                 "action": "add",
                 "row": {
@@ -92,8 +99,8 @@ with st.expander("🔒 Acceso Administrador (Publicar / Borrar)", expanded=False
                     "Sección": seccion,
                     "Autor": autor,
                     "Enlace Web": enlace,
-                    "Resumen": resumen,
-                    "Imagen": "",
+                    "Resumen": "",
+                    "Imagen": imagen,
                 },
             }
             try:
@@ -105,7 +112,7 @@ with st.expander("🔒 Acceso Administrador (Publicar / Borrar)", expanded=False
             except Exception as e:
               st.error(f"Error al conectar: {e}")
           else:
-            st.warning("Por favor complete al menos el título y el contenido.")
+            st.warning("Por favor complete al menos el título de la noticia.")
 
     with tab_ges:
       st.write("Listado de noticias publicadas para eliminar:")
@@ -163,6 +170,14 @@ st.subheader(f"📋 {seccion_seleccionada} (Últimas publicaciones)")
 if noticias_filtradas:
   # Mostrar máximo 10 noticias en la vista principal de la sección
   for noticia in noticias_filtradas[:10]:
+    # Mostrar la imagen principal si existe
+    img = noticia.get("Imagen")
+    if img and str(img).startswith("http"):
+      try:
+        st.image(img, use_container_width=True)
+      except Exception:
+        pass
+
     st.markdown(f"## {noticia.get('Título', 'Sin título')}")
 
     autor = str(noticia.get("Autor", "Redacción")).replace("*", "").strip()
@@ -170,9 +185,6 @@ if noticias_filtradas:
     fecha = str(noticia.get("Fecha", "")).split("T")[0]
 
     st.caption(f"Sección: **{seccion}** | Autor: **{autor}** | Fecha: {fecha}")
-
-    if noticia.get("Resumen"):
-      st.write(noticia.get("Resumen"))
 
     if noticia.get("Enlace Web"):
       st.markdown(f"[🔗 Leer artículo completo]({noticia.get('Enlace Web')})")
