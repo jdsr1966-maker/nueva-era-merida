@@ -2,22 +2,24 @@ import datetime
 import requests
 import streamlit as st
 
-# Configuración de la página de Streamlit
+# Configuración de la página
 st.set_page_config(
     page_title="Nueva Era Mérida Digital", page_icon="📰", layout="centered"
 )
 
-# Ocultar elementos predeterminados de Streamlit para una vista limpia de periódico
-hide_streamlit_style = """
+# Ocultar elementos predeterminados de Streamlit para un diseño limpio
+st.markdown(
+    """
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     </style>
-"""
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
-# Encabezado con el logotipo oficial centrado
+# Logotipo oficial centrado y proporcionado
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
   try:
@@ -26,7 +28,7 @@ with col2:
     st.title("📰 Nueva Era Mérida Digital")
 
 st.markdown(
-    "<hr style='margin: 10px 0px; border: 1px solid #ccc;'>",
+    "<hr style='margin: 15px 0px; border: 1px solid #ddd;'>",
     unsafe_allow_html=True,
 )
 
@@ -34,23 +36,18 @@ st.markdown(
 API_URL = "https://script.google.com/macros/s/AKfycbzlRR2RRkKdzC19WqVulEEB-0gyqu5XbwWRp-96K-JGAVhbeGAjFON1sVVzG8pUzWhV/exec"
 
 
-# Función para consultar las noticias desde Google Sheets
+# Función para consultar noticias
 def obtener_noticias():
   try:
-    response = requests.get(API_URL)
-    return response.json()
-  except Exception as e:
+    res = requests.get(API_URL)
+    return res.json()
+  except Exception:
     return []
 
 
-# --- PANEL DE REDACCIÓN DIRECTO EN LA PÁGINA PRINCIPAL ---
-st.markdown("### ⚙️ Panel de Redacción")
-modo_admin = st.toggle("🔐 Entrar al Modo Redacción para Publicar")
-
-if modo_admin:
-  st.markdown("---")
-  st.subheader("✍️ Publicar Nueva Noticia")
-  with st.form("form_publicar"):
+# Panel de Redacción en un menú desplegable súper cómodo para celulares
+with st.expander("✍️ Panel de Redacción (Publicar Noticia)", expanded=False):
+  with st.form("form_noticia"):
     titulo = st.text_input("Título de la Noticia")
     seccion = st.selectbox(
         "Sección",
@@ -67,13 +64,13 @@ if modo_admin:
     fecha = st.date_input(
         "Fecha", value=datetime.date.today()
     ).strftime("%Y-%m-%d")
-    resumen = st.text_area("Resumen o bajada")
+    resumen = st.text_area("Resumen o cuerpo de la noticia")
     enlace = st.text_input("Enlace Web (opcional)")
-    imagen = st.text_input("URL de la Imagen (enlace directo de la foto)")
+    imagen = st.text_input("URL de la Imagen (opcional)")
 
-    submit_button = st.form_submit_button("Publicar Noticia")
+    btn_publicar = st.form_submit_button("Publicar Noticia")
 
-    if submit_button:
+    if btn_publicar:
       if titulo and resumen:
         payload = {
             "action": "add",
@@ -90,49 +87,32 @@ if modo_admin:
         }
         try:
           requests.post(API_URL, json=payload)
-          st.success(
-              "¡Noticia publicada con éxito! Recargue la página en unos segundos."
-          )
-        except Exception as ex:
-          st.error(f"Error al publicar: {ex}")
+          st.success("¡Noticia publicada con éxito! Recargue en unos segundos.")
+        except Exception as e:
+          st.error(f"Error al conectar: {e}")
       else:
         st.warning("Por favor complete al menos el título y el resumen.")
 
-st.markdown("---")
-
-# Sección principal: Visualizar noticias publicadas
 st.markdown("### 📋 Últimas Publicaciones")
 
 noticias = obtener_noticias()
 
 if noticias and isinstance(noticias, list):
   for noticia in noticias:
-    # Mostrar la foto de la noticia si tiene enlace válido
-    img_url = noticia.get("Imagen")
-    if img_url and str(img_url).startswith("http"):
+    img = noticia.get("Imagen")
+    if img and str(img).startswith("http"):
       try:
-        st.image(img_url, use_container_width=True)
+        st.image(img, use_container_width=True)
       except Exception:
         pass
 
     st.markdown(f"## {noticia.get('Título', 'Sin título')}")
 
-    # Limpiar formato de autor y sección
-    autor_limpio = (
-        str(noticia.get("Autor", "Equipo"))
-        .replace("*", "")
-        .replace("  ", " ")
-        .strip()
-    )
-    seccion_limpia = (
-        str(noticia.get("Sección", "General")).replace("*", "").strip()
-    )
-    fecha_limpia = str(noticia.get("Fecha", "")).split("T")[0]
+    autor = str(noticia.get("Autor", "Redacción")).replace("*", "").strip()
+    seccion = str(noticia.get("Sección", "General")).replace("*", "").strip()
+    fecha = str(noticia.get("Fecha", "")).split("T")[0]
 
-    st.caption(
-        f"Sección: **{seccion_limpia}** | Autor: **{autor_limpio}** | Fecha:"
-        f" {fecha_limpia}"
-    )
+    st.caption(f"Sección: **{seccion}** | Autor: **{autor}** | Fecha: {fecha}")
 
     if noticia.get("Resumen"):
       st.write(noticia.get("Resumen"))
@@ -143,7 +123,7 @@ if noticias and isinstance(noticias, list):
     st.markdown("---")
 else:
   st.info(
-      "Aún no hay noticias registradas. Active el interruptor de redacción"
-      " arriba para publicar su primera nota."
-  )
+      "Aún no hay noticias registradas. Despliegue el panel de redacción arriba"
+      " para publicar la primera."
+)
     
