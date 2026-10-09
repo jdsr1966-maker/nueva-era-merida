@@ -108,35 +108,19 @@ def load_data():
     except Exception:
       pass
 
-  data_inicial = {
-      "ID": [1, 2],
-      "Fecha": ["2026-10-02", "2026-09-25"],
-      "Título": [
-          "Selección de delegados parroquiales y sectoriales del CLPP",
-          (
-              "Exposición 'Confluencias 2: Metamorfosis' en el Museo de Arte"
-              " Colonial"
-          ),
-      ],
-      "Sección": ["Institucional", "Cultura"],
-      "Autor": ["Equipo Editorial", "Equipo Editorial"],
-      "Enlace Web": [
-          "https://www.nuevaerameridadigital.com",
-          "https://www.nuevaerameridadigital.com",
-      ],
-      "Resumen": [
-          (
-              "Cobertura especial sobre la elección y selección de delegados"
-              " para el Consejo Local de Planificación Pública en Mérida."
-          ),
-          (
-              "Reporte cultural detallando la muestra colectiva de veintitrés"
-              " artistas plásticos locales."
-          ),
-      ],
-      "Imagen": ["", ""],
-  }
-  df = pd.DataFrame(data_inicial)
+  # Iniciar completamente limpio (sin noticias falsas o de relleno)
+  df = pd.DataFrame(
+      columns=[
+          "ID",
+          "Fecha",
+          "Título",
+          "Sección",
+          "Autor",
+          "Enlace Web",
+          "Resumen",
+          "Imagen",
+      ]
+  )
   df.to_csv(DATA_FILE, index=False)
   return df
 
@@ -167,7 +151,7 @@ st.markdown(
 )
 st.markdown("---")
 
-# Control de sesión para el acceso de administración
+# Control de sesión para el acceso de administración seguro
 if "admin_logged_in" not in st.session_state:
   st.session_state.admin_logged_in = False
 
@@ -199,7 +183,10 @@ if not st.session_state.admin_logged_in:
   if seleccion_nav.startswith("🏠"):
     st.subheader("📰 Últimas Publicaciones (Portada)")
     if df_articles.empty:
-      st.info("No hay publicaciones disponibles en este momento.")
+      st.info(
+          "No hay publicaciones disponibles en este momento. El portal está"
+          " listo para recibir notas."
+      )
     else:
       df_ultimas = df_articles.iloc[::-1].head(10)
       for index, row in df_ultimas.iterrows():
@@ -320,10 +307,9 @@ if not st.session_state.admin_logged_in:
           st.markdown("---")
 
 else:
-  # --- VISTA DE ADMINISTRACIÓN (REDACCIÓN Y ELIMINACIÓN) ---
+  # --- VISTA DE ADMINISTRACIÓN (REDACCIÓN Y GESTIÓN) ---
   st.subheader("🛠️ Panel de Control y Gestión Editorial")
 
-  # Botón rápido para volver a la portada desde el panel de admin
   col_a1, col_a2 = st.columns([2, 2])
   with col_a1:
     st.success("✅ Modo Redacción Activo")
@@ -394,7 +380,6 @@ else:
           st.balloons()
 
     st.markdown("---")
-    # Botón directo para regresar a la portada al terminar de publicar
     if st.button(
         "🏠 ¿Terminó de publicar? Volver a la Portada del Periódico",
         key="btn_volver_abajo",
@@ -440,4 +425,4 @@ st.markdown(
     " www.nuevaerameridadigital.com</a><br>Depósito Legal:"
     " ME2026000169</small></div>",
     unsafe_allow_html=True,
-    )
+              )
