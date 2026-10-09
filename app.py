@@ -1,3 +1,4 @@
+import base64
 import datetime
 import requests
 import streamlit as st
@@ -82,14 +83,27 @@ with st.expander("🔒 Acceso Administrador (Publicar / Borrar)", expanded=False
             ),
         )
         enlace = st.text_input("Enlace Web (opcional)")
-        imagen = st.text_input(
-            "URL de la Imagen (enlace directo de la foto principal)"
+
+        # Selector directo de imagen (Adiós a copiar URLs)
+        archivo_imagen = st.file_uploader(
+            "Fotografía principal (Seleccionar de su galería)",
+            type=["jpg", "jpeg", "png"],
         )
 
         btn_publicar = st.form_submit_button("Publicar Noticia")
 
         if btn_publicar:
           if titulo:
+            img_base64 = ""
+            img_name = ""
+            img_mime = ""
+
+            if archivo_imagen is not None:
+              img_bytes = archivo_imagen.read()
+              img_base64 = base64.b64encode(img_bytes).decode("utf-8")
+              img_name = archivo_imagen.name
+              img_mime = archivo_imagen.type
+
             payload = {
                 "action": "add",
                 "row": {
@@ -100,14 +114,17 @@ with st.expander("🔒 Acceso Administrador (Publicar / Borrar)", expanded=False
                     "Autor": autor,
                     "Enlace Web": enlace,
                     "Resumen": "",
-                    "Imagen": imagen,
+                    "Imagen": "",
                 },
+                "image_base64": img_base64,
+                "image_name": img_name,
+                "image_mime": img_mime,
             }
             try:
               requests.post(API_URL, json=payload)
               st.success(
-                  "¡Noticia publicada con éxito! Ya puede verla en la sección"
-                  " correspondiente."
+                  "¡Noticia publicada con éxito! La foto se subió automáticamente"
+                  " y ya puede verla."
               )
             except Exception as e:
               st.error(f"Error al conectar: {e}")
