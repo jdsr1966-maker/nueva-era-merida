@@ -64,7 +64,7 @@ with st.expander("🔒 Acceso Administrador (Publicar / Borrar)", expanded=False
       "Ingrese contraseña de administrador", type="password"
   )
 
-  if password == "1234":
+  if password == "Geor.0307":
     st.success("Acceso concedido. Panel de Redacción activo.")
     tab_pub, tab_ges = st.tabs(["Publicar Noticia", "Gestionar / Borrar"])
 
