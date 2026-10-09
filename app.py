@@ -82,9 +82,8 @@ with st.expander("🔒 Acceso Administrador (Publicar / Borrar)", expanded=False
             ),
         )
         enlace = st.text_input("Enlace Web (opcional)")
-        # Casilla simple y directa para el enlace de la imagen
         imagen = st.text_input(
-            "URL de la Imagen (pegue el enlace directo aquí)"
+            "URL de la Imagen (pegue el enlace directo de la foto)"
         )
 
         btn_publicar = st.form_submit_button("Publicar Noticia")
