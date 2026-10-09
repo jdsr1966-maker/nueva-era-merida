@@ -19,7 +19,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Logotipo oficial centrado y proporcionado
+# Logotipo oficial centrado
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
   try:
@@ -40,65 +40,112 @@ API_URL = "https://script.google.com/macros/s/AKfycbzlRR2RRkKdzC19WqVulEEB-0gyqu
 def obtener_noticias():
   try:
     res = requests.get(API_URL)
-    return res.json()
+    data = res.json()
+    return data if isinstance(data, list) else []
   except Exception:
     return []
 
 
-# Panel de Redacción en un menú desplegable súper cómodo para celulares
-with st.expander("✍️ Panel de Redacción (Publicar Noticia)", expanded=False):
-  with st.form("form_noticia"):
-    titulo = st.text_input("Título de la Noticia")
-    seccion = st.selectbox(
-        "Sección",
-        [
-            "Local",
-            "Comunidad",
-            "Opinión",
-            "Cultura",
-            "Deportes",
-            "Memoria Histórica",
-        ],
+# Secciones oficiales solicitadas
+SECCIONES = [
+    "Todas",
+    "Opinión",
+    "Institucional",
+    "Memoria viva",
+    "Cultura",
+    "Deportes",
+    "Comunidades",
+    "Política",
+]
+
+# --- PANEL DE REDACCIÓN Y GESTIÓN ---
+with st.expander("✍️ Panel de Redacción y Gestión (Publicar / Borrar)", expanded=False):
+  tab_pub, tab_ges = st.tabs(["Publicar Noticia", "Gestionar / Borrar"])
+
+  with tab_pub:
+    with st.form("form_noticia", clear_on_submit=True):
+      titulo = st.text_input("Título de la Noticia")
+      seccion = st.selectbox("Sección", SECCIONES[1:])
+      autor = st.text_input("Autor / Redacción", value="Redacción")
+      fecha = st.date_input(
+          "Fecha", value=datetime.date.today()
+      ).strftime("%Y-%m-%d")
+      resumen = st.text_area("Contenido o bajada de la noticia")
+      enlace = st.text_input("Enlace Web (opcional)")
+      imagen = st.text_input("URL de la Imagen (enlace directo de la foto)")
+
+      btn_publicar = st.form_submit_button("Publicar Noticia")
+
+      if btn_publicar:
+        if titulo and resumen:
+          payload = {
+              "action": "add",
+              "row": {
+                  "ID": str(datetime.datetime.now().timestamp()),
+                  "Fecha": fecha,
+                  "Título": titulo,
+                  "Sección": seccion,
+                  "Autor": autor,
+                  "Enlace Web": enlace,
+                  "Resumen": resumen,
+                  "Imagen": imagen,
+              },
+          }
+          try:
+            requests.post(API_URL, json=payload)
+            st.success(
+                "¡Noticia publicada con éxito! Ya puede verla abajo en la"
+                " sección correspondiente."
+            )
+          except Exception as e:
+            st.error(f"Error al conectar: {e}")
+        else:
+          st.warning("Por favor complete al menos el título y el contenido.")
+
+  with tab_ges:
+    st.write(
+        "Listado de noticias publicadas para eliminar en caso de error:"
     )
-    autor = st.text_input("Autor / Redacción", value="Redacción")
-    fecha = st.date_input(
-        "Fecha", value=datetime.date.today()
-    ).strftime("%Y-%m-%d")
-    resumen = st.text_area("Resumen o cuerpo de la noticia")
-    enlace = st.text_input("Enlace Web (opcional)")
-    imagen = st.text_input("URL de la Imagen (opcional)")
+    noticias_actuales = obtener_noticias()
+    if noticias_actuales:
+      for n in noticias_actuales:
+        c1, c2 = st.columns([3, 1])
+        with c1:
+          st.text(f"[{n.get('Sección')}] {n.get('Título')}")
+        with c2:
+          if st.button("🗑️ Borrar", key=f"del_{n.get('ID')}"):
+            try:
+              payload_del = {"action": "delete", "ID": str(n.get("ID"))}
+              requests.post(API_URL, json=payload_del)
+              st.success("Noticia eliminada. Recargue la página.")
+              st.rerun()
+            except Exception as e:
+              st.error(f"No se pudo borrar: {e}")
+    else:
+      st.info("No hay noticias registradas.")
 
-    btn_publicar = st.form_submit_button("Publicar Noticia")
-
-    if btn_publicar:
-      if titulo and resumen:
-        payload = {
-            "action": "add",
-            "row": {
-                "ID": str(datetime.datetime.now().timestamp()),
-                "Fecha": fecha,
-                "Título": titulo,
-                "Sección": seccion,
-                "Autor": autor,
-                "Enlace Web": enlace,
-                "Resumen": resumen,
-                "Imagen": imagen,
-            },
-        }
-        try:
-          requests.post(API_URL, json=payload)
-          st.success("¡Noticia publicada con éxito! Recargue en unos segundos.")
-        except Exception as e:
-          st.error(f"Error al conectar: {e}")
-      else:
-        st.warning("Por favor complete al menos el título y el resumen.")
-
-st.markdown("### 📋 Últimas Publicaciones")
+# --- NAVEGACIÓN POR CARPETAS (SECCIONES) ---
+st.markdown("### 🗂️ Explorar Secciones")
+seccion_seleccionada = st.selectbox(
+    "Seleccione una sección:", SECCIONES, label_visibility="collapsed"
+)
 
 noticias = obtener_noticias()
 
-if noticias and isinstance(noticias, list):
-  for noticia in noticias:
+# Filtrar según la sección seleccionada
+if seccion_seleccionada != "Todas":
+  noticias_filtradas = [
+      n for n in noticias if n.get("Sección") == seccion_seleccionada
+  ]
+else:
+  noticias_filtradas = noticias
+
+st.markdown("---")
+st.subheader(f"📋 {seccion_seleccionada} (Últimas publicaciones)")
+
+if noticias_filtradas:
+  # Mostrar máximo 10 noticias en la vista principal de la sección
+  for noticia in noticias_filtradas[:10]:
     img = noticia.get("Imagen")
     if img and str(img).startswith("http"):
       try:
@@ -122,8 +169,4 @@ if noticias and isinstance(noticias, list):
 
     st.markdown("---")
 else:
-  st.info(
-      "Aún no hay noticias registradas. Despliegue el panel de redacción arriba"
-      " para publicar la primera."
-)
-    
+  st.info(f"No hay noticias registradas en la sección '{seccion_seleccionada}'.")
