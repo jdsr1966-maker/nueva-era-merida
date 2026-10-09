@@ -59,7 +59,9 @@ SECCIONES = [
 ]
 
 # --- PANEL DE REDACCIÓN Y GESTIÓN ---
-with st.expander("✍️ Panel de Redacción y Gestión (Publicar / Borrar)", expanded=False):
+with st.expander(
+    "✍️ Panel de Redacción y Gestión (Publicar / Borrar)", expanded=False
+):
   tab_pub, tab_ges = st.tabs(["Publicar Noticia", "Gestionar / Borrar"])
 
   with tab_pub:
@@ -103,19 +105,20 @@ with st.expander("✍️ Panel de Redacción y Gestión (Publicar / Borrar)", ex
           st.warning("Por favor complete al menos el título y el contenido.")
 
   with tab_ges:
-    st.write(
-        "Listado de noticias publicadas para eliminar en caso de error:"
-    )
+    st.write("Listado de noticias publicadas para eliminar en caso de error:")
     noticias_actuales = obtener_noticias()
     if noticias_actuales:
-      for n in noticias_actuales:
+      for i, n in enumerate(noticias_actuales):
         c1, c2 = st.columns([3, 1])
         with c1:
-          st.text(f"[{n.get('Sección')}] {n.get('Título')}")
+          st.text(
+              f"[{n.get('Sección', 'General')}] {n.get('Título', 'Sin título')}"
+          )
         with c2:
-          if st.button("🗑️ Borrar", key=f"del_{n.get('ID')}"):
+          noticia_id = str(n.get("ID", f"item_{i}"))
+          if st.button("🗑️ Borrar", key=f"del_{i}_{noticia_id}"):
             try:
-              payload_del = {"action": "delete", "ID": str(n.get("ID"))}
+              payload_del = {"action": "delete", "ID": noticia_id}
               requests.post(API_URL, json=payload_del)
               st.success("Noticia eliminada. Recargue la página.")
               st.rerun()
